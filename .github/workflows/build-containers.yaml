@@ -93,6 +93,7 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.meta-tailscale.outputs.tags }}
           labels: ${{ steps.meta-tailscale.outputs.labels }}
+          file: ./tailscale/Containerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -104,9 +105,12 @@ jobs:
         with:
           context: ./zfs
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BASE }}/tailscale:stable
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.meta-zfs.outputs.tags }}
           labels: ${{ steps.meta-zfs.outputs.labels }}
+          file: ./zfs/Containerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
