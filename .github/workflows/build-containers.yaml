@@ -68,7 +68,7 @@ jobs:
           tags: |
             type=raw,value=stable,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,pattern={{date 'YYYYMMDD'}}
+            type=schedule,pattern={{date 'YYYYMMDD'}}
 
       # Extract metadata for Docker image for zfs
       # https://github.com/docker/metadata-action
@@ -80,7 +80,7 @@ jobs:
           tags: |
             type=raw,value=stable,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,pattern={{date 'YYYYMMDD'}}
+            type=schedule,pattern={{date 'YYYYMMDD'}}
 
       # Build and push Docker image for tailscale
       # https://github.com/docker/build-push-action
