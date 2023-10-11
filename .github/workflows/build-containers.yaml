@@ -121,7 +121,6 @@ jobs:
 
       # Sign the resulting Docker images digests.
       # This will only write to the public Rekor transparency log when the Docker repository is public to avoid leaking data. 
-      # If you would like to publish transparency data even for private images, pass --force to cosign below.
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker images
         env:
@@ -132,5 +131,5 @@ jobs:
           DIGEST_ZFS: ${{ steps.build-and-push-zfs.outputs.digest }}
         # This step uses the identity token to provision an ephemeral certificate against the sigstore community Fulcio instance.
         run: |
-          echo "${TAGS_TAILSCALE}" | xargs -I {} cosign sign --yes --force {}@${DIGEST_TAILSCALE}
-          echo "${TAGS_ZFS}" | xargs -I {} cosign sign --yes --force {}@${DIGEST_ZFS}
+          echo "${TAGS_TAILSCALE}" | xargs -I {} cosign sign --yes {}@${DIGEST_TAILSCALE}
+          echo "${TAGS_ZFS}" | xargs -I {} cosign sign --yes {}@${DIGEST_ZFS}
