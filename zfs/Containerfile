@@ -34,7 +34,7 @@ RUN ls -al /zfs/*.rpm
 # Final layer
 FROM ${BASE_IMAGE}
 
-# ZFS
+# ZFS + hdparm
 # We install a bunch of RPMs, probably more than needed
 COPY --from=builder /zfs/*.rpm /zfs/
 RUN rm \
@@ -46,8 +46,6 @@ RUN rm \
     && echo "zfs" > /etc/modules-load.d/zfs.conf \
     # We don't want any files on /var
     && rm -rf /var/lib/pcp \
+    # Add hdparm
+    && rpm-ostree install hdparm \
     && ostree container commit
-
-# Add hdparm
-RUN rpm-ostree install hdparm && \
-    ostree container commit

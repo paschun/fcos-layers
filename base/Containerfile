@@ -1,14 +1,12 @@
 FROM quay.io/fedora/fedora-coreos:stable
 
-# Add Tailscale
 RUN cd /etc/yum.repos.d/ && \
+    # Add Tailscale
     curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo && \
     rpm-ostree install tailscale && \
     systemctl enable tailscaled && \
-    ostree container commit
-
-# Add cloudflared (Cloudflare Tunnels)
-RUN cd /etc/yum.repos.d/ && \
+    # Add cloudflared (Cloudflare Tunnels)
     curl -LO https://pkg.cloudflare.com/cloudflared-ascii.repo && \
     rpm-ostree install cloudflared && \
+    # Commit the container
     ostree container commit
