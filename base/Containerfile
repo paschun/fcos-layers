@@ -6,3 +6,9 @@ RUN cd /etc/yum.repos.d/ && \
     rpm-ostree install tailscale && \
     systemctl enable tailscaled && \
     ostree container commit
+
+# Add cloudflared (Cloudflare Tunnels)
+RUN curl -fsSl https://pkg.cloudflare.com/cloudflared-ascii.repo > /etc/yum.repos.d/cloudflared.repo && \
+    dnf update  && \
+    dnf install cloudflared && \
+    ostree container commit

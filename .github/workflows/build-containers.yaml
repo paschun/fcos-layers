@@ -33,12 +33,17 @@ jobs:
         run: |
           echo "IMAGE_NAME_BASE=${IMAGE_NAME_BASE,,}" >>${GITHUB_ENV}
 
+      # Gets the version of Fedora distribution used in the Fedora CoreOS base image
+      - name: Set BUILDER_VERSION
+        run: |
+          echo "BUILDER_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release' | cut -d '.' -f 1)" >> "$GITHUB_ENV"
+
       # Install the cosign tool
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
         uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 #v3.1.1
         with:
-          cosign-release: 'v2.1.1'
+          cosign-release: 'v2.2.0'
 
       # Add support for building for other platforms with QEMU
       # https://github.com/docker/setup-qemu-action
@@ -140,6 +145,7 @@ jobs:
           push: true
           build-args: |
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BASE }}/base:stable
+            BUILDER_VERSION=${{ env.BUILDER_VERSION }}
           platforms: "linux/amd64"
           tags: ${{ steps.meta-zfs.outputs.tags }}
           labels: ${{ steps.meta-zfs.outputs.labels }}
