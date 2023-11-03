@@ -8,7 +8,7 @@ RUN cd /etc/yum.repos.d/ && \
     ostree container commit
 
 # Add cloudflared (Cloudflare Tunnels)
-RUN curl -fsSl https://pkg.cloudflare.com/cloudflared-ascii.repo > /etc/yum.repos.d/cloudflared.repo && \
-    dnf update  && \
-    dnf install cloudflared && \
+RUN cd /etc/yum.repos.d/ && \
+    curl -LO https://pkg.cloudflare.com/cloudflared-ascii.repo && \
+    rpm-ostree install cloudflared && \
     ostree container commit
