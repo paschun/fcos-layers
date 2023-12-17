@@ -1,12 +1,12 @@
 # Needs to be set to the Fedora version on CoreOS stable stream, as it is our base image.
 #   BUILDER_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release' | cut -d '.' -f 1)
-ARG BUILDER_VERSION=38
+ARG BUILDER_VERSION=39
 # Base image for the final layer
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 
 # We can't use the `uname -r` as it will pick up the host kernel version
 FROM quay.io/fedora/fedora-coreos:stable AS kernel-query
-RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' > /kernel-version.txt
+RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' | tee /kernel-version.txt
 
 # Using https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html
 FROM registry.fedoraproject.org/fedora:${BUILDER_VERSION} AS builder
@@ -22,7 +22,7 @@ RUN dnf install -y jq dkms gcc make autoconf automake libtool rpm-build libtirpc
 WORKDIR /
 # Uses project_id from: https://release-monitoring.org/project/11706/
 RUN curl "https://release-monitoring.org/api/v2/versions/?project_id=11706" \
-    | jq --raw-output '.stable_versions[0]' >> /zfs_version.txt
+    | jq --raw-output '.stable_versions[0]' | tee /zfs_version.txt
 RUN curl -L -O https://github.com/openzfs/zfs/releases/download/zfs-$(cat /zfs_version.txt)/zfs-$(cat /zfs_version.txt).tar.gz \
     && tar xzf zfs-$(cat /zfs_version.txt).tar.gz \
     && mv zfs-$(cat /zfs_version.txt) zfs
@@ -37,10 +37,7 @@ FROM ${BASE_IMAGE}
 # ZFS + hdparm
 # We install a bunch of RPMs, probably more than needed
 COPY --from=builder /zfs/*.rpm /zfs/
-RUN rm \
-      /zfs/*devel*.rpm \
-      /zfs/zfs-test*.rpm \
-    && rpm-ostree install \
+RUN rpm-ostree install \
       /zfs/*.$(rpm -qa kernel --queryformat '%{ARCH}').rpm \
     # Auto-load ZFS module
     && echo "zfs" > /etc/modules-load.d/zfs.conf \
