@@ -5,7 +5,7 @@ RUN cd /etc/yum.repos.d/ && \
     curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo && \
     rpm-ostree install tailscale && \
     systemctl enable tailscaled && \
-    # Add cloudflared (Cloudflare Tunnels)
+    # Add cloudflared (Cloudflare Tunnel client)
     curl -LO https://pkg.cloudflare.com/cloudflared-ascii.repo && \
     rpm-ostree install cloudflared && \
     # Commit the container
