@@ -1,6 +1,8 @@
 FROM quay.io/fedora/fedora-coreos:stable
 
 RUN cd /etc/yum.repos.d/ && \
+    # Add screen and restic (from the official Fedora repositories)
+    rpm-ostree install screen restic && \
     # Add Tailscale
     curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo && \
     rpm-ostree install tailscale && \

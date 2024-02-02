@@ -30,6 +30,8 @@ Includes:
 
 - [Tailscale](https://tailscale.com/)
 - [Cloudflare Tunnel client](https://github.com/cloudflare/cloudflared) (cloudflared)
+- [restic](https://github.com/restic/restic)
+- The `screen` utility
 
 Image:
 
