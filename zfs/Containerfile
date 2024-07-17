@@ -49,6 +49,6 @@ RUN rm \
     && rm -rf /var/lib/pcp \
     && ostree container commit
 
-# Add hdparm
-RUN rpm-ostree install hdparm \
+# Add hdparm and smartmontools
+RUN rpm-ostree install hdparm smartmontools \
     && ostree container commit
