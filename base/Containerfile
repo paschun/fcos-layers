@@ -1,8 +1,9 @@
 FROM quay.io/fedora/fedora-coreos:stable
 
 RUN cd /etc/yum.repos.d/ && \
-    # Add screen and restic (from the official Fedora repositories)
-    rpm-ostree install screen restic && \
+    # From the official Fedora repositories, add:
+    # screen, restic, pv, sqlite
+    rpm-ostree install screen restic pv sqlite && \
     # Add Tailscale
     curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo && \
     rpm-ostree install tailscale && \
@@ -10,5 +11,7 @@ RUN cd /etc/yum.repos.d/ && \
     # Add cloudflared (Cloudflare Tunnel client)
     curl -LO https://pkg.cloudflare.com/cloudflared-ascii.repo && \
     rpm-ostree install cloudflared && \
+    # Add gotop
+    rpm-ostree install https://github.com/xxxserxxx/gotop/releases/download/v4.2.0/gotop_v4.2.0_linux_amd64.rpm \
     # Commit the container
     ostree container commit
