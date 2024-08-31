@@ -5,6 +5,8 @@ Custom Fedora CoreOS layered images.
 - [`tailscale`](#tailscale-image): Includes Tailscale
 - [`base`](#base-image): Includes Tailscale and Cloudflare Tunnel client (cloudflared)
 - [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
+- [`monitoring`](#monitoring-image): Includes Grafana Alloy (built on top of `base`)
+- [`monitoring-zfs`](#monitoring-zfs-image): Includes Grafana Alloy (built on top of `zfs`)
 
 These images are built using GitHub Actions every Monday and Friday, from the upstream "stable" images of Fedora CoreOS.
 
