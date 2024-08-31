@@ -56,3 +56,33 @@ ghcr.io/italypaleale/fcos-layers/zfs:stable
 ```
 
 [Containerfile](./zfs/Containerfile)
+
+## `monitoring` image
+
+Includes:
+
+- Everything in the [`base` image](#base-image)
+- [Grafana Alloy](https://github.com/grafana/alloy)
+
+Image:
+
+```text
+ghcr.io/italypaleale/fcos-layers/monitoring:stable
+```
+
+[Containerfile](./monitoring/Containerfile)
+
+## `monitoring-zfs` image
+
+Includes:
+
+- Everything in the [`zfs` image](#zfs-image)
+- [Grafana Alloy](https://github.com/grafana/alloy)
+
+Image:
+
+```text
+ghcr.io/italypaleale/fcos-layers/monitoring-zfs:stable
+```
+
+[Containerfile](./monitoring/Containerfile)
