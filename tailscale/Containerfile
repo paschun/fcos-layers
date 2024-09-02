@@ -1,8 +1,8 @@
 FROM quay.io/fedora/fedora-coreos:stable
 
 # Add Tailscale
-RUN cd /etc/yum.repos.d/ && \
-    curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo && \
+RUN \
+    echo -e '[tailscale-stable]\nname=Tailscale stable\nbaseurl=https://pkgs.tailscale.com/stable/fedora/$basearch\nenabled=1\ntype=rpm\nrepo_gpgcheck=1\ngpgcheck=1\ngpgkey=https://pkgs.tailscale.com/stable/fedora/repo.gpg' | sudo tee /etc/yum.repos.d/tailscale.repo && \
     rpm-ostree install tailscale && \
     systemctl enable tailscaled && \
     ostree container commit
