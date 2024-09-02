@@ -1,15 +1,15 @@
 FROM quay.io/fedora/fedora-coreos:stable
 
-RUN cd /etc/yum.repos.d/ && \
+RUN \
     # From the official Fedora repositories, add:
     # screen, restic, pv, sqlite
     rpm-ostree install screen restic pv sqlite && \
     # Add Tailscale
-    curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo && \
+    echo -e '[tailscale-stable]\nname=Tailscale stable\nbaseurl=https://pkgs.tailscale.com/stable/fedora/$basearch\nenabled=1\ntype=rpm\nrepo_gpgcheck=1\ngpgcheck=1\ngpgkey=https://pkgs.tailscale.com/stable/fedora/repo.gpg' | sudo tee /etc/yum.repos.d/tailscale.repo && \
     rpm-ostree install tailscale && \
     systemctl enable tailscaled && \
     # Add cloudflared (Cloudflare Tunnel client)
-    curl -LO https://pkg.cloudflare.com/cloudflared-ascii.repo && \
+    echo -e '[cloudflared-stable]\nname=cloudflared-stable\nbaseurl=https://pkg.cloudflare.com/cloudflared/rpm\nenabled=1\ntype=rpm\ngpgcheck=1\ngpgkey=https://pkg.cloudflare.com/cloudflare-ascii-pubkey.gpg' | sudo tee /etc/yum.repos.d/tailscale.repo && \
     rpm-ostree install cloudflared && \
     # Add gotop
     # This is installed on x86_64 only as pre-compiled RPMs are not available for other archs from the project
