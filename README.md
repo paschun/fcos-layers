@@ -33,7 +33,7 @@ Includes:
 - [Tailscale](https://tailscale.com/)
 - [Cloudflare Tunnel client](https://github.com/cloudflare/cloudflared) (cloudflared)
 - [restic](https://github.com/restic/restic)
-- The `screen` utility
+- Utilities: `screen`, `pv`, `sqlite`
 
 Image:
 
@@ -65,6 +65,7 @@ Includes:
 
 - Everything in the [`base` image](#base-image)
 - [Grafana Alloy](https://github.com/grafana/alloy)
+- [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter)
 
 Image:
 
@@ -80,6 +81,7 @@ Includes:
 
 - Everything in the [`zfs` image](#zfs-image)
 - [Grafana Alloy](https://github.com/grafana/alloy)
+- [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter)
 
 Image:
 

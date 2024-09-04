@@ -3,9 +3,12 @@ ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 
 FROM ${BASE_IMAGE}
 
-# https://grafana.com/docs/alloy/latest/set-up/install/linux/
 RUN \
+    # Grafana Alloy
+    # https://grafana.com/docs/alloy/latest/set-up/install/linux/
     echo -e '[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nrepo_gpgcheck=1\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt' | sudo tee /etc/yum.repos.d/grafana.repo && \
     rpm-ostree install alloy && \
+    # prometheus-podman-exporter
+    rpm-ostree install prometheus-podman-exporter && \
     # Commit the container
     ostree container commit
