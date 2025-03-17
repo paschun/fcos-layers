@@ -1,9 +1,7 @@
 # Needs to be set to the Fedora version on CoreOS stable stream, as it is our base image.
-#   BUILDER_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release' | cut -d '.' -f 1)
 ARG BUILDER_VERSION=41
 # Base image for the final layer
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
-ARG ZFS_VERSION
 
 # We can't use the `uname -r` as it will pick up the host kernel version
 FROM quay.io/fedora/fedora-coreos:stable AS kernel-query
@@ -25,10 +23,9 @@ RUN dnf install -y jq dkms akmods gcc make autoconf automake libtool rpm-build l
 
 WORKDIR /
 
-# https://github.com/ublue-os/akmods/blob/main/build_files/zfs/build-kmod-zfs.sh
-RUN [ -n "$ZFS_VERSION" ] || ( \
-        curl "https://api.github.com/repos/openzfs/zfs/releases" -o data.json \
-        && ZFS_VERSION=$(jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' data.json | cut -f '2-' -d '-' )) \
+ARG ZFS_VERSION
+# Inspo https://github.com/ublue-os/akmods/blob/main/build_files/zfs/build-kmod-zfs.sh
+RUN : ${ZFS_VERSION:=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f '2-' -d '-' )} \
     && echo $ZFS_VERSION | tee /zfs_version.txt
 
 RUN curl -L -O https://github.com/openzfs/zfs/releases/download/zfs-$(cat /zfs_version.txt)/zfs-$(cat /zfs_version.txt).tar.gz \
@@ -45,7 +42,6 @@ RUN ls -al /zfs/*.rpm
 FROM ${BASE_IMAGE}
 
 # ZFS
-# We install a bunch of RPMs, probably more than needed
 COPY --from=builder /zfs/*.rpm /zfs/
 RUN rm -f \
       /zfs/*src.rpm \

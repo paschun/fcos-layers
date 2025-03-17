@@ -135,6 +135,7 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BASE }}/base:${{ env.FCOS_VERSION }}
             BUILDER_VERSION=${{ env.BUILDER_VERSION }}
+            ZFS_VERSION=${{ env.ZFS_VERSION }}
           platforms: ${{ matrix.docker_arch }}
           tags: ${{ steps.meta-zfs.outputs.tags }}
           #labels: ${{ steps.meta-zfs.outputs.labels }}
