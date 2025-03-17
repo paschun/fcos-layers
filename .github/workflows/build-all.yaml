@@ -1,0 +1,40 @@
+name: Build All Images
+
+on:
+  schedule:
+    # https://crontab.guru/#42_16_*_*_1,5
+    - cron: '42 1 * * *'
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  # Docker registry
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME_BASE: ${{ github.repository }}
+    
+jobs:
+  build-base:
+    name: Build base
+    uses: ./.github/workflows/build-containers.yaml
+    with:
+      image_name: base
+    secrets: inherit
+
+  build-images:
+    needs: build-base
+    strategy:
+      matrix:
+        image_name:
+          - zfs
+    name: Build image "${{ matrix.image_name }}"
+    uses: ./.github/workflows/build-containers.yaml
+    with:
+      image_name: ${{ matrix.image_name }}
+      build_args: |
+        BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BASE }}/base:$FCOS_VERSION
+        BUILDER_VERSION=$BUILDER_VERSION
+        ZFS_VERSION=$ZFS_VERSION
+      tag_suffix: -$ZFS_VERSION
+    secrets: inherit
