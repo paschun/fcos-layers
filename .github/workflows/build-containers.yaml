@@ -15,6 +15,11 @@ on:
         type: string
         default: ""
 
+env:
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME_BASE: ${{ github.repository }}
+    
 jobs:
   build:
     strategy:
