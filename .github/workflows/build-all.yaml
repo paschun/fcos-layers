@@ -27,7 +27,7 @@ jobs:
     with:
       image_name: ${{ matrix.image_name }}
       build_args: |
-        BASE_IMAGE=$REGISTRY/$IMAGE_NAME_BASE/base:$FCOS_VERSION
+        BASE_IMAGE=$IMAGE_FULL_NAME:$FCOS_VERSION
         BUILDER_VERSION=$BUILDER_VERSION
         ZFS_VERSION=$ZFS_VERSION
       tag_suffix: -$ZFS_VERSION
