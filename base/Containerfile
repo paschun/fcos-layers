@@ -2,7 +2,6 @@ FROM quay.io/fedora/fedora-coreos:stable
 
 RUN \
     # From the official Fedora repositories, add:
-    # tmux, restic, pv
-    rpm-ostree install tmux rclone restic pv btop && \
+    rpm-ostree install kitty fd-find ripgrep tree neovim bat man-db ranger btop mosh tmux tcpdump ldns-utils policycoreutils-python-utils qemu-guest-agent podman-tui restic rclone uv parted nmap-ncat buildah pv && \
     # Commit the container
     ostree container commit

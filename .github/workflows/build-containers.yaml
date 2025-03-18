@@ -16,6 +16,12 @@ env:
   registry: ghcr.io
   # github.repository as <account>/<repo>
 
+#TODO:
+# redhat-actions/podman-login
+# redhat-actions/buildah-build # doesnt support annotations
+# redhat-actions/push-to-registry
+# cosign sign -y -r --key
+
 jobs:
   setup-env:
     runs-on: ubuntu-latest
