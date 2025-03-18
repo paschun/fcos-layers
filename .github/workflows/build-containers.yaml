@@ -18,7 +18,6 @@ on:
 env:
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
-  IMAGE_FULL_NAME: ${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.image_name }}
     
 jobs:
   build:
@@ -49,7 +48,7 @@ jobs:
         uses: actions/checkout@v4
 
       # Gets the version of Fedora distribution used in the Fedora CoreOS base image
-      - name: Set FCOS_VERSION, BUILDER_VERSION, ZFS_VERSION, PLATFORM_PAIR
+      - name: Set Env variables
         run: |
           FCOS_JSON=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json")
           FCOS_VERSION=$(echo "$FCOS_JSON" | jq -r '.architectures.${{ matrix.platform.fcos_arch }}.artifacts.metal.release')
@@ -62,6 +61,9 @@ jobs:
           platform=${{ matrix.platform.docker_arch }}
           # replaces / with -
           echo "PLATFORM_PAIR=${platform//\//-}" | tee -a $GITHUB_ENV
+
+          IMAGE_FULL_NAME="${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.image_name }}"
+          echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a "$GITHUB_ENV"
 
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
@@ -100,7 +102,7 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: ${{ matrix.platform.docker_arch }}
           tags: ${{ env.IMAGE_FULL_NAME }}
-          annotations: ${{ steps.meta-base.outputs.annotations }}
+          annotations: ${{ steps.meta.outputs.annotations }}
           # https://docs.docker.com/build/exporters/image-registry/
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true,compression=zstd
 
@@ -108,7 +110,7 @@ jobs:
       - name: Export digests
         run: |
           mkdir -p ${{ runner.temp }}/digests/
-          digest="${{ steps.build-base.outputs.digest }}"
+          digest="${{ steps.build.outputs.digest }}"
           # removes sha256: prefix
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
           
