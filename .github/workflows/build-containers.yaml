@@ -10,10 +10,6 @@ on:
         required: false
         type: string
         default: ""
-      tag_suffix:
-        required: false
-        type: string
-        default: ""
 
 # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs
 env:
@@ -60,6 +56,7 @@ jobs:
     runs-on: ${{ matrix.platform.runner }}
 
     permissions:
+      # contents: read is used in actions/checkout
       contents: read
       packages: write
       attestations: write
@@ -105,13 +102,15 @@ jobs:
       - name: "Define image metadata: ${{ inputs.image_name }}"
         id: meta
         uses: docker/metadata-action@v5
+        env:
+          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', env.ZFS_VERSION) || '' }}
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           tags: |
             type=raw,value=stable,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=schedule,pattern={{date 'YYYYMMDD-HHmmss'}}
-            type=raw,value=${{ env.FCOS_VERSION }}${{ inputs.tag_suffix }}
+            type=raw,value=${{ env.FCOS_VERSION }}${{ env.tag_suffix }}
 
       # https://github.com/docker/build-push-action
       - name: "Build Docker image: ${{ inputs.image_name }}"
@@ -199,6 +198,8 @@ jobs:
       - name: "Define image metadata"
         id: meta
         uses: docker/metadata-action@v5
+        env:
+          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', env.ZFS_VERSION) || '' }}
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           # creates 3 tags.
@@ -208,7 +209,7 @@ jobs:
             type=raw,value=stable,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=schedule,pattern={{date 'YYYYMMDD-HHmmss'}}
-            type=raw,value=${{ env.FCOS_VERSION }}${{ inputs.tag_suffix }}
+            type=raw,value=${{ env.FCOS_VERSION }}${{ env.tag_suffix }}
           # default labels: https://github.com/opencontainers/image-spec/blob/main/annotations.md
           # labels are deprecated, use annotations
 

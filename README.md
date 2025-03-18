@@ -7,7 +7,7 @@ Custom Fedora CoreOS layered images.
 
 These images are built using GitHub Actions every day, from the upstream "stable" images of Fedora CoreOS.
 
-Images are published on GitHub Packages and available for linux/amd64.
+Images are published on GitHub Packages and available for linux/amd64 and linux/arm64.
 
 ## `base` image
 

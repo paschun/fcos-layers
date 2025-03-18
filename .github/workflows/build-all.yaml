@@ -3,10 +3,13 @@ name: Build All Images
 on:
   schedule:
     # https://crontab.guru/#42_16_*_*_1,5
-    - cron: '42 1 * * *'
+    - cron: "42 1 * * *"
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
+
+env:
+  registry: ghcr.io
 
 jobs:
   build-base:
@@ -31,5 +34,4 @@ jobs:
         BASE_IMAGE=$IMAGE_FULL_NAME:$FCOS_VERSION
         BUILDER_VERSION=$BUILDER_VERSION
         ZFS_VERSION=$ZFS_VERSION
-      tag_suffix: -$ZFS_VERSION
     secrets: inherit
