@@ -127,6 +127,8 @@ jobs:
           context: ./${{ inputs.image_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # always pull because old builds are cached under same tags
+          pull: true
           platforms: ${{ matrix.platform.docker_arch }}
           tags: ${{ env.IMAGE_FULL_NAME }}
           annotations: ${{ steps.meta.outputs.annotations }}
