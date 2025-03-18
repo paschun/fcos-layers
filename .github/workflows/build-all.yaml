@@ -22,6 +22,7 @@ jobs:
       matrix:
         image_name:
           - zfs
+      fail-fast: false
     name: Build image "${{ matrix.image_name }}"
     uses: ./.github/workflows/build-containers.yaml
     with:

@@ -15,21 +15,45 @@ on:
         type: string
         default: ""
 
+# https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs
 env:
-  REGISTRY: ghcr.io
+  registry: ghcr.io
   # github.repository as <account>/<repo>
-    
+
 jobs:
-  build:
+  setup-env:
+    runs-on: ubuntu-latest
+    steps:
+      # Gets the version of Fedora distribution used in the Fedora CoreOS base image
+      - name: Set Env variables
+        id: vars
+        run: |
+          FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
+          BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
+          ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
+          IMAGE_FULL_NAME="${{ env.registry }}/${{ github.repository }}/${{ inputs.image_name }}"
+
+          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a $GITHUB_OUTPUT
+
+    outputs:
+      # Export each variable individually as a job output
+      FCOS_VERSION: ${{ steps.vars.outputs.FCOS_VERSION }}
+      BUILDER_VERSION: ${{ steps.vars.outputs.BUILDER_VERSION }}
+      ZFS_VERSION: ${{ steps.vars.outputs.ZFS_VERSION }}
+      IMAGE_FULL_NAME: ${{ steps.vars.outputs.IMAGE_FULL_NAME }}
+
+  build-each:
+    needs: setup-env
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         platform:
           - docker_arch: linux/amd64
-            fcos_arch: x86_64
             runner: ubuntu-latest
           - docker_arch: linux/arm64
-            fcos_arch: aarch64
             runner: ubuntu-24.04-arm
 
     name: Build ${{ inputs.image_name }} on ${{ matrix.platform.docker_arch }}
@@ -47,23 +71,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Gets the version of Fedora distribution used in the Fedora CoreOS base image
-      - name: Set Env variables
+      - name: Setup env variables for this job, reusing those set in setup-env
+        env:
+          FCOS_VERSION: ${{needs.setup-env.outputs.FCOS_VERSION}}
+          BUILDER_VERSION: ${{needs.setup-env.outputs.BUILDER_VERSION}}
+          ZFS_VERSION: ${{needs.setup-env.outputs.ZFS_VERSION}}
+          IMAGE_FULL_NAME: ${{needs.setup-env.outputs.IMAGE_FULL_NAME}}
         run: |
-          FCOS_JSON=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json")
-          FCOS_VERSION=$(echo "$FCOS_JSON" | jq -r '.architectures.${{ matrix.platform.fcos_arch }}.artifacts.metal.release')
-          BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
-          ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
-          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a "$GITHUB_ENV"
-          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a "$GITHUB_ENV"
-          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a "$GITHUB_ENV"
-          
-          platform=${{ matrix.platform.docker_arch }}
-          # replaces / with -
-          echo "PLATFORM_PAIR=${platform//\//-}" | tee -a $GITHUB_ENV
+          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_ENV
+          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_ENV
+          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_ENV
+          echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a $GITHUB_ENV
 
-          IMAGE_FULL_NAME="${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.image_name }}"
-          echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a "$GITHUB_ENV"
+          PLATFORM=${{ matrix.platform.docker_arch }}
+          # replaces / with -
+          echo "PLATFORM_PAIR=${PLATFORM//\//-}" | tee -a $GITHUB_ENV
 
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
@@ -76,10 +98,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # https://github.com/docker/login-action
-      - name: Log into registry ${{ env.REGISTRY }}
+      - name: Log into registry ${{ env.registry }}
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.registry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -117,7 +139,7 @@ jobs:
           digest="${{ steps.build.outputs.digest }}"
           # removes sha256: prefix
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
-          
+
       - name: Upload digests
         uses: actions/upload-artifact@v4
         with:
@@ -127,7 +149,7 @@ jobs:
           retention-days: 1
 
       # Sign the resulting Docker images digests.
-      # This will only write to the public Rekor transparency log when the Docker repository is public to avoid leaking data. 
+      # This will only write to the public Rekor transparency log when the Docker repository is public to avoid leaking data.
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker images
         # step disabled for now
@@ -145,19 +167,24 @@ jobs:
 
   merge:
     runs-on: ubuntu-latest
-    needs:
-      - build
+    needs: build-each
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     steps:
-      - name: Set Env variables
+      - name: Setup env variables for this job, reusing those set in setup-env
+        env:
+          FCOS_VERSION: ${{needs.setup-env.outputs.FCOS_VERSION}}
+          BUILDER_VERSION: ${{needs.setup-env.outputs.BUILDER_VERSION}}
+          ZFS_VERSION: ${{needs.setup-env.outputs.ZFS_VERSION}}
+          IMAGE_FULL_NAME: ${{needs.setup-env.outputs.IMAGE_FULL_NAME}}
         run: |
-          FCOS_JSON=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json")
-          FCOS_VERSION=$(echo "$FCOS_JSON" | jq -r '.architectures.${{ matrix.platform.fcos_arch }}.artifacts.metal.release')
-          ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
-          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a "$GITHUB_ENV"
-          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a "$GITHUB_ENV"
-
-          IMAGE_FULL_NAME="${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.image_name }}"
-          echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a "$GITHUB_ENV"
+          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_ENV
+          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_ENV
+          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_ENV
+          echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a $GITHUB_ENV
 
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -167,10 +194,10 @@ jobs:
           merge-multiple: true
 
       # https://github.com/docker/login-action
-      - name: Log into registry ${{ env.REGISTRY }}
+      - name: Log into registry ${{ env.registry }}
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.registry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -201,8 +228,8 @@ jobs:
           # printf command formats each filename as a reference to an image digest
           #   *: Expands to all files in the current directory (runner.temp/digests)
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.IMAGE_FULL_NAME }}@sha256:%s ' *)
+            $(printf "$IMAGE_FULL_NAME@sha256:%s " *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_FULL_NAME }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect "$IMAGE_FULL_NAME:${{ steps.meta.outputs.version }}"
