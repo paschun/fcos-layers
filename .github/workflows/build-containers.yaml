@@ -21,6 +21,8 @@ env:
 # redhat-actions/buildah-build # doesnt support annotations
 # redhat-actions/push-to-registry
 # cosign sign -y -r --key
+# 
+# quay.io tag is later than curl streams json
 
 jobs:
   setup-env:

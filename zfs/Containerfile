@@ -3,8 +3,10 @@ ARG BUILDER_VERSION=41
 # Base image for the final layer
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 
+FROM ${BASE_IMAGE} AS base
+
 # We can't use the `uname -r` as it will pick up the host kernel version
-FROM quay.io/fedora/fedora-coreos:stable AS kernel-query
+FROM base AS kernel-query
 RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' | tee /kernel-version.txt
 
 # Using https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html
@@ -39,7 +41,7 @@ RUN ./configure -with-linux=/usr/src/kernels/$(cat /kernel-version.txt)/ -with-l
 RUN ls -al /zfs/*.rpm
 
 # Final layer
-FROM ${BASE_IMAGE}
+FROM base
 
 # ZFS
 COPY --from=builder /zfs/*.rpm /zfs/

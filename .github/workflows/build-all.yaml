@@ -17,6 +17,8 @@ jobs:
     uses: ./.github/workflows/build-containers.yaml
     with:
       image_name: base
+      build_args: |
+        BASE_IMAGE=quay.io/fedora/fedora-coreos:$FCOS_VERSION
     secrets: inherit
 
   build-images:

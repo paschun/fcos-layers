@@ -1,4 +1,5 @@
-FROM quay.io/fedora/fedora-coreos:stable
+ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
+FROM ${BASE_IMAGE}
 
 RUN \
     # From the official Fedora repositories, add:
