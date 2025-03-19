@@ -10,18 +10,40 @@ on:
         required: false
         type: string
         default: ""
+      FCOS_VERSION: # used in tags
+        required: true
+        type: string
+      #BUILDER_VERSION:
+      #  required: false
+      #  type: string
+      #  default: ""
+      ZFS_VERSION: # used in tags
+        required: false
+        type: string
+        default: "zfs-version-should-have-been-set-here"
 
 # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs
 env:
   registry: ghcr.io
   # github.repository as <account>/<repo>
 
+permissions:
+  # contents: read is used in actions/checkout
+  contents: read
+  # permits an action to upload and publish packages on GitHub Packages
+  packages: write
+  # permits an action to generate an artifact attestation for a build.
+  attestations: write
+  # Fetch an OpenID Connect (OIDC) token.
+  # This is used to complete the identity challenge with sigstore/fulcio when running outside of PRs.
+  #id-token: write
+
 #TODO:
 # redhat-actions/podman-login
 # redhat-actions/buildah-build # doesnt support annotations
 # redhat-actions/push-to-registry
 # cosign sign -y -r --key
-# 
+#
 # quay.io tag is later than curl streams json
 
 jobs:
@@ -30,24 +52,14 @@ jobs:
     steps:
       # Gets the version of Fedora distribution used in the Fedora CoreOS base image
       - name: Set Env variables
-        id: vars
+        id: setup-vars
         run: |
-          FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
-          BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
-          ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
           IMAGE_FULL_NAME="${{ env.registry }}/${{ github.repository }}/${{ inputs.image_name }}"
 
-          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
-          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
-          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
           echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a $GITHUB_OUTPUT
 
     outputs:
-      # Export each variable individually as a job output
-      FCOS_VERSION: ${{ steps.vars.outputs.FCOS_VERSION }}
-      BUILDER_VERSION: ${{ steps.vars.outputs.BUILDER_VERSION }}
-      ZFS_VERSION: ${{ steps.vars.outputs.ZFS_VERSION }}
-      IMAGE_FULL_NAME: ${{ steps.vars.outputs.IMAGE_FULL_NAME }}
+      IMAGE_FULL_NAME: ${{ steps.setup-vars.outputs.IMAGE_FULL_NAME }}
 
   build-each:
     needs: setup-env
@@ -63,19 +75,7 @@ jobs:
     name: Build ${{ inputs.image_name }} on ${{ matrix.platform.docker_arch }}
     runs-on: ${{ matrix.platform.runner }}
 
-    permissions:
-      # contents: read is used in actions/checkout
-      contents: read
-      packages: write
-      attestations: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      id-token: write
-
     env:
-      FCOS_VERSION: ${{needs.setup-env.outputs.FCOS_VERSION}}
-      BUILDER_VERSION: ${{needs.setup-env.outputs.BUILDER_VERSION}}
-      ZFS_VERSION: ${{needs.setup-env.outputs.ZFS_VERSION}}
       IMAGE_FULL_NAME: ${{needs.setup-env.outputs.IMAGE_FULL_NAME}}
 
     steps:
@@ -111,14 +111,14 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         env:
-          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', env.ZFS_VERSION) || '' }}
+          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', inputs.ZFS_VERSION) || '' }}
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           tags: |
             type=raw,value=stable,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=schedule,pattern={{date 'YYYYMMDD-HHmm'}}
-            type=raw,value=${{ env.FCOS_VERSION }}${{ env.tag_suffix }}
+            type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.tag_suffix }}
 
       # https://github.com/docker/build-push-action
       - name: "Build Docker image: ${{ inputs.image_name }}"
@@ -176,15 +176,7 @@ jobs:
     needs:
       - setup-env
       - build-each
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
     env:
-      FCOS_VERSION: ${{needs.setup-env.outputs.FCOS_VERSION}}
-      BUILDER_VERSION: ${{needs.setup-env.outputs.BUILDER_VERSION}}
-      ZFS_VERSION: ${{needs.setup-env.outputs.ZFS_VERSION}}
       IMAGE_FULL_NAME: ${{needs.setup-env.outputs.IMAGE_FULL_NAME}}
     steps:
       - name: Download digests
@@ -210,7 +202,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         env:
-          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', env.ZFS_VERSION) || '' }}
+          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', inputs.ZFS_VERSION) || '' }}
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           # creates 3 tags.
@@ -220,7 +212,7 @@ jobs:
             type=raw,value=stable,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=schedule,pattern={{date 'YYYYMMDD-HHmm'}}
-            type=raw,value=${{ env.FCOS_VERSION }}${{ env.tag_suffix }}
+            type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.tag_suffix }}
           # default labels: https://github.com/opencontainers/image-spec/blob/main/annotations.md
           # labels are deprecated, use annotations
 

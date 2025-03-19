@@ -9,17 +9,40 @@ on:
   workflow_dispatch:
 
 jobs:
+  setup-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Env variables
+        id: get-vars
+        run: |
+          FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
+          BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
+          ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
+
+          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
+
+    outputs:
+      # Export each variable individually as a job output
+      FCOS_VERSION: ${{ steps.get-vars.outputs.FCOS_VERSION }}
+      BUILDER_VERSION: ${{ steps.get-vars.outputs.BUILDER_VERSION }}
+      ZFS_VERSION: ${{ steps.get-vars.outputs.ZFS_VERSION }}
+
   build-base:
-    name: Build base
+    needs: setup-env
     uses: ./.github/workflows/build-containers.yaml
     with:
       image_name: base
+      FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
       build_args: |
-        BASE_IMAGE=quay.io/fedora/fedora-coreos:$FCOS_VERSION
+        BASE_IMAGE=quay.io/fedora/fedora-coreos:${{ needs.setup-env.outputs.FCOS_VERSION }}
     secrets: inherit
 
   build-images:
-    needs: build-base
+    needs:
+      - setup-env
+      - build-base
     strategy:
       matrix:
         image_name:
@@ -29,8 +52,10 @@ jobs:
     uses: ./.github/workflows/build-containers.yaml
     with:
       image_name: ${{ matrix.image_name }}
+      FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
+      ZFS_VERSION: ${{ needs.setup-env.outputs.ZFS_VERSION }}
       build_args: |
-        BASE_IMAGE=ghcr.io/${{ github.repository }}/base:$FCOS_VERSION
-        BUILDER_VERSION=$BUILDER_VERSION
-        ZFS_VERSION=$ZFS_VERSION
+        BASE_IMAGE=ghcr.io/${{ github.repository }}/base:${{ needs.setup-env.outputs.FCOS_VERSION }}
+        BUILDER_VERSION=${{ needs.setup-env.outputs.BUILDER_VERSION }}
+        ZFS_VERSION=${{ needs.setup-env.outputs.ZFS_VERSION }}
     secrets: inherit
