@@ -12,8 +12,8 @@ jobs:
   setup-env:
     runs-on: ubuntu-latest
     steps:
-      - name: Set Env variables
-        id: get-vars
+      - name: Get versions to build
+        id: get-vers
         run: |
           FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
@@ -23,15 +23,34 @@ jobs:
           echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
           echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
 
+      - name: check if base tags exist
+        id: tag-exists-base
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ghcr.io
+          repository: ${{ github.repository }}/base
+          tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}
+
+      - name: check if zfs tags exist
+        id: tag-exists-zfs
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ghcr.io
+          repository: ${{ github.repository }}/zfs
+          tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}-${{ steps.get-vers.outputs.ZFS_VERSION }}
+
     outputs:
       # Export each variable individually as a job output
-      FCOS_VERSION: ${{ steps.get-vars.outputs.FCOS_VERSION }}
-      BUILDER_VERSION: ${{ steps.get-vars.outputs.BUILDER_VERSION }}
-      ZFS_VERSION: ${{ steps.get-vars.outputs.ZFS_VERSION }}
+      FCOS_VERSION: ${{ steps.get-vers.outputs.FCOS_VERSION }}
+      BUILDER_VERSION: ${{ steps.get-vers.outputs.BUILDER_VERSION }}
+      ZFS_VERSION: ${{ steps.get-vers.outputs.ZFS_VERSION }}
+      base-tag-exists: ${{ steps.tag-exists-base.outputs.tag == 'found' }}
+      zfs-tag-exists: ${{ steps.tag-exists-zfs.outputs.tag == 'found' }}
 
   build-base:
     needs: setup-env
     uses: ./.github/workflows/build-containers.yaml
+    if: ${{ ! needs.setup-env.outputs.base-tag-exists }}
     with:
       image_name: base
       FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
@@ -39,19 +58,14 @@ jobs:
         BASE_IMAGE=quay.io/fedora/fedora-coreos:${{ needs.setup-env.outputs.FCOS_VERSION }}
     secrets: inherit
 
-  build-images:
+  build-zfs:
     needs:
       - setup-env
       - build-base
-    strategy:
-      matrix:
-        image_name:
-          - zfs
-      fail-fast: false
-    name: Build image "${{ matrix.image_name }}"
     uses: ./.github/workflows/build-containers.yaml
+    if: ${{ ! needs.setup-env.outputs.zfs-tag-exists }}
     with:
-      image_name: ${{ matrix.image_name }}
+      image_name: zfs
       FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
       ZFS_VERSION: ${{ needs.setup-env.outputs.ZFS_VERSION }}
       build_args: |

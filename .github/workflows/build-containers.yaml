@@ -13,10 +13,6 @@ on:
       FCOS_VERSION: # used in tags
         required: true
         type: string
-      #BUILDER_VERSION:
-      #  required: false
-      #  type: string
-      #  default: ""
       ZFS_VERSION: # used in tags
         required: false
         type: string
