@@ -1,12 +1,11 @@
-name: Build All Images
+name: Build all multi-arch images for a single coreos stream
 
 on:
-  schedule:
-    # https://crontab.guru/#42_16_*_*_1,5
-    - cron: "42 1 * * *"
-  push:
-    branches: ["main"]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      stream:
+        required: true
+        type: string
 
 jobs:
   setup-env:
@@ -15,7 +14,7 @@ jobs:
       - name: Get versions to build
         id: get-vers
         run: |
-          FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/stable.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
+          FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
 
@@ -52,6 +51,7 @@ jobs:
     uses: ./.github/workflows/build-multiarch-image.yaml
     if: ${{ ! needs.setup-env.outputs.base-tag-exists }}
     with:
+      stream: ${{ inputs.stream }}
       image_name: base
       FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
       build_args: |
@@ -65,6 +65,7 @@ jobs:
     uses: ./.github/workflows/build-multiarch-image.yaml
     if: ${{ ! needs.setup-env.outputs.zfs-tag-exists }}
     with:
+      stream: ${{ inputs.stream }}
       image_name: zfs
       FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
       ZFS_VERSION: ${{ needs.setup-env.outputs.ZFS_VERSION }}

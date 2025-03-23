@@ -1,0 +1,24 @@
+name: Build all multi-arch images for all coreos streams
+
+on:
+  schedule:
+    # https://crontab.guru/#44_3_*_*_*
+    - cron: "44 3 * * *"
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-stream:
+    strategy:
+      fail-fast: true
+      matrix:
+        stream:
+          - stable
+          - testing
+
+    name: Build ${{ matrix.stream }}
+    uses: ./.github/workflows/build-stream.yaml
+    with:
+      stream: ${{ matrix.stream }}
+    secrets: inherit

@@ -1,8 +1,11 @@
-name: Build a specific container
+name: Build an image for both arm64 and x86_64
 
 on:
   workflow_call:
     inputs:
+      stream: # used in tags
+        required: true
+        type: string
       image_name:
         required: true
         type: string
@@ -111,9 +114,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           tags: |
-            type=raw,value=stable,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=schedule,pattern={{date 'YYYYMMDD-HHmm'}}
+            type=raw,value=${{ inputs.stream }}
+            type=raw,value=latest,enable=${{ inputs.stream == 'stable' }}
             type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.tag_suffix }}
 
       # https://github.com/docker/build-push-action
@@ -205,9 +207,8 @@ jobs:
           # `stable` and `latest` when it's run on main branch
           # `20250101` when this workflow is triggered by a schedule
           tags: |
-            type=raw,value=stable,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=schedule,pattern={{date 'YYYYMMDD-HHmm'}}
+            type=raw,value=${{ inputs.stream }}
+            type=raw,value=latest,enable=${{ inputs.stream == 'stable' }}
             type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.tag_suffix }}
           # default labels: https://github.com/opencontainers/image-spec/blob/main/annotations.md
           # labels are deprecated, use annotations
