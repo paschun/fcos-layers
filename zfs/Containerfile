@@ -42,7 +42,6 @@ RUN ls -al /zfs/*.rpm
 
 # Final layer
 FROM base
-
 # ZFS
 COPY --from=builder /zfs/*.rpm /zfs/
 RUN rm -f \

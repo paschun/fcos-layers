@@ -1,8 +1,5 @@
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 FROM ${BASE_IMAGE}
 
-RUN \
-    # From the official Fedora repositories, add:
-    rpm-ostree install kitty fd-find ripgrep tree neovim bat man-db ranger btop mosh tmux tcpdump ldns-utils policycoreutils-python-utils qemu-guest-agent podman-tui restic rclone uv parted nmap-ncat buildah pv && \
-    # Commit the container
-    ostree container commit
+RUN rpm-ostree install kitty fd-find ripgrep tree neovim bat man-db ranger btop mosh tmux tcpdump ldns-utils policycoreutils-python-utils qemu-guest-agent podman-tui restic rclone uv parted nmap-ncat socat buildah pv mtr inxi \
+    && ostree container commit

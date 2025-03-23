@@ -49,7 +49,7 @@ jobs:
 
   build-base:
     needs: setup-env
-    uses: ./.github/workflows/build-containers.yaml
+    uses: ./.github/workflows/build-multiarch-image.yaml
     if: ${{ ! needs.setup-env.outputs.base-tag-exists }}
     with:
       image_name: base
@@ -62,7 +62,7 @@ jobs:
     needs:
       - setup-env
       - build-base
-    uses: ./.github/workflows/build-containers.yaml
+    uses: ./.github/workflows/build-multiarch-image.yaml
     if: ${{ ! needs.setup-env.outputs.zfs-tag-exists }}
     with:
       image_name: zfs
