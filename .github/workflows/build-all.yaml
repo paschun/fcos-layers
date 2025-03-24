@@ -16,6 +16,7 @@ jobs:
         stream:
           - stable
           - testing
+          - next
 
     name: Build ${{ matrix.stream }}
     uses: ./.github/workflows/build-stream.yaml

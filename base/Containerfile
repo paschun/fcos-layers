@@ -1,5 +1,5 @@
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 FROM ${BASE_IMAGE}
 
-RUN rpm-ostree install kitty fd-find ripgrep tree neovim bat man-db ranger btop mosh tmux tcpdump ldns-utils policycoreutils-python-utils qemu-guest-agent podman-tui restic rclone uv parted nmap-ncat socat buildah pv mtr inxi \
+RUN rpm-ostree install kitty fd-find ripgrep tree neovim bat man-db ranger btop mosh tmux tcpdump ldns-utils policycoreutils-python-utils qemu-guest-agent podman-tui restic rclone uv parted nmap-ncat socat buildah pv mtr inxi ethtool \
     && ostree container commit
