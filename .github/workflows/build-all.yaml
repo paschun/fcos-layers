@@ -11,7 +11,7 @@ on:
 jobs:
   build-stream:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         stream:
           - stable
