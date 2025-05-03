@@ -142,12 +142,13 @@ jobs:
           mkdir -p ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}
           digest="${{ steps.build.outputs.digest }}"
           # removes sha256: prefix
-          touch "${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/${digest#sha256:}"
+          digest="${digest#sha256:}"
+          touch "${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/${digest}"
 
       - name: Upload digests
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ inputs.image_name }}-${{ env.PLATFORM_PAIR }}-${{ inputs.stream }}
+          name: digests-${{ inputs.image_name }}-${{ inputs.stream }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/*
           if-no-files-found: error
           retention-days: 1
@@ -180,8 +181,8 @@ jobs:
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
-          path: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}
-          pattern: digests-${{ inputs.image_name }}-*
+          path: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/
+          pattern: digests-${{ inputs.image_name }}-${{ inputs.stream }}-*
           merge-multiple: true
 
       # https://github.com/docker/login-action
@@ -214,7 +215,7 @@ jobs:
           # labels are deprecated, use annotations
 
       - name: Create manifest list and push
-        working-directory: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}
+        working-directory: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/
         run: |
           # jq command preps the tags as -t flags
           # printf command formats each filename as a reference to an image digest
