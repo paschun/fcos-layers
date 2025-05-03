@@ -8,7 +8,7 @@ on:
         type: string
 
 jobs:
-  setup-env:
+  pull-build-vars:
     runs-on: ubuntu-latest
     steps:
       - name: Get versions to build
@@ -47,30 +47,30 @@ jobs:
       zfs-tag-exists: ${{ steps.tag-exists-zfs.outputs.tag == 'found' }}
 
   build-base:
-    needs: setup-env
+    needs: pull-build-vars
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: ${{ needs.setup-env.outputs.base-tag-exists == 'false' }}
+    if: ${{ needs.pull-build-vars.outputs.base-tag-exists == 'false' }}
     with:
       stream: ${{ inputs.stream }}
       image_name: base
-      FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
+      FCOS_VERSION: ${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
       build_args: |
-        BASE_IMAGE=quay.io/fedora/fedora-coreos:${{ needs.setup-env.outputs.FCOS_VERSION }}
+        BASE_IMAGE=quay.io/fedora/fedora-coreos:${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
     secrets: inherit
 
   build-zfs:
     needs:
-      - setup-env
+      - pull-build-vars
       - build-base
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: ${{ needs.setup-env.outputs.zfs-tag-exists == 'false' }}
+    if: ${{ needs.pull-build-vars.outputs.zfs-tag-exists == 'false' }}
     with:
       stream: ${{ inputs.stream }}
       image_name: zfs
-      FCOS_VERSION: ${{ needs.setup-env.outputs.FCOS_VERSION }}
-      ZFS_VERSION: ${{ needs.setup-env.outputs.ZFS_VERSION }}
+      FCOS_VERSION: ${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
+      ZFS_VERSION: ${{ needs.pull-build-vars.outputs.ZFS_VERSION }}
       build_args: |
-        BASE_IMAGE=ghcr.io/${{ github.repository }}/base:${{ needs.setup-env.outputs.FCOS_VERSION }}
-        BUILDER_VERSION=${{ needs.setup-env.outputs.BUILDER_VERSION }}
-        ZFS_VERSION=${{ needs.setup-env.outputs.ZFS_VERSION }}
+        BASE_IMAGE=ghcr.io/${{ github.repository }}/base:${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
+        BUILDER_VERSION=${{ needs.pull-build-vars.outputs.BUILDER_VERSION }}
+        ZFS_VERSION=${{ needs.pull-build-vars.outputs.ZFS_VERSION }}
     secrets: inherit
