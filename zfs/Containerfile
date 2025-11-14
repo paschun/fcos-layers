@@ -1,5 +1,5 @@
 # Needs to be set to the Fedora version on CoreOS stable stream, as it is our base image.
-ARG BUILDER_VERSION=42
+ARG BUILDER_VERSION=43
 # Base image for the final layer
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 
