@@ -1,0 +1,123 @@
+# https://gitlab.com/fedora/bootc/examples/-/blob/main/kernel-module/Containerfile?ref_type=heads
+# https://wiki.centos.org/HowTos(2f)BuildingKernelModules.html#Building_a_kernel_module_rpm_package_.28kmod.29
+# https://koji.fedoraproject.org/koji/packageinfo?packageID=38974
+# https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs
+# https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_43/filesystems:bcachefs:release.repo
+
+# could try quay.io/bootc-devel/fedora-bootc-43-standard
+ARG BUILDER_IMAGE=quay.io/fedora/fedora:latest
+# Base image for the final layer
+ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
+
+FROM ${BASE_IMAGE} AS base
+
+FROM base AS version-query
+# We use `rpm` instead of `uname -r` because `uname` will return the host kernel version instead of container kernel version
+RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' | tee /kernel-version.txt
+# arch == aarch64 || x86_64
+RUN rpm -qa kernel --queryformat '%{ARCH}' | tee /arch.txt
+RUN . /etc/os-release && echo "$VERSION_ID" | tee /fedora-version.txt
+# can't yet cache packages in /var/cache/rpm-ostree : https://github.com/coreos/rpm-ostree/issues/5453
+#RUN rpm-ostree install bcachefs-tools
+# cant install old versions of bcachefs-tools from COPR. builds of old versions are only kept for 2 weeks.
+#RUN bcachefs version | tee /bcachefs-tools-version.txt
+
+FROM ${BUILDER_IMAGE} AS builder
+# ARG TARGETARCH # pre-defined by podman, re-declare here to use in this stage
+# TARGETARCH == arm64 || amd64
+
+COPY --from=version-query /kernel-version.txt /kernel-version.txt
+#COPY --from=version-query /bcachefs-tools-version.txt /bcachefs-tools-version.txt
+COPY --from=version-query /arch.txt /arch.txt
+COPY --from=version-query /fedora-version.txt /fedora-version.txt
+
+# avoids the hundreds of xattr and cp errors with dracut when running dnf install
+ENV DRACUT_NO_XATTR=1
+
+# cache target has default mode 755 and root:root ownership
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+echo "keepcache=True" >> /etc/dnf/dnf.conf
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
+dnf config-manager addrepo --from-repofile=https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_$(cat /fedora-version.txt)/filesystems:bcachefs:release.repo
+dnf install -y fedora-repos-archive
+#dnf copr enable -y ngompa/bcachefs
+EOF
+
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    dnf install -y kernel-$(cat /kernel-version.txt)  kernel-devel-$(cat /kernel-version.txt) openssl
+
+# the kernel module will be built here in dkms postinstall step
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    dnf install -y dkms-bcachefs bcachefs-tools
+
+# dkms mktarball bcachefs/1.36.0 -k 6.17.12-300.fc43.aarch64 --binaries-only --archive ./tarball.tar
+# in tarball.tar >
+# rw-r--r-- root/root      1709 2026-01-14 07:37 ./dkms_main_tree/6.17.11-300.fc43.aarch64/aarch64/module/Module.symvers
+# -rw-r--r-- root/root    799668 2026-01-14 07:37 ./dkms_main_tree/6.17.11-300.fc43.aarch64/aarch64/module/bcachefs.ko.xz
+
+WORKDIR /root
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    dnf install -y rpmdevtools
+# dnf install -y kernel-rpm-macros
+RUN rpmdev-setuptree
+RUN <<EOT cat > ~/rpmbuild/SPECS/bcachefs-kmod.spec
+%define module_version $(bcachefs version)
+%define kernel_version $(cat /kernel-version.txt)
+%define rpm_release 1
+
+Name:           bcachefs-kmod-%{kernel_version}
+# dashes not allowed in version
+Version:        %{module_version}
+# ?dist puts .fc43
+Release:        %{rpm_release}%{?dist}
+Summary:        bcachefs kernel module
+
+License:        GPL
+Source0:        %{_sourcedir}/bcachefs.ko.xz
+
+BuildArch:      $(cat /arch.txt)
+Requires:       kernel-uname-r = %{kernel_version}
+
+# mandatory
+%description
+bcachefs v%{module_version} kernel module for kernel %{kernel_version}
+
+%install
+install -d %{buildroot}/usr/lib/modules/%{kernel_version}/extra/
+install -m 0755 %{SOURCE0} %{buildroot}/usr/lib/modules/%{kernel_version}/extra/bcachefs.ko.xz
+
+install -d %{buildroot}/etc/modules-load.d/
+echo "bcachefs" > %{buildroot}/etc/modules-load.d/bcachefs.conf
+
+%post
+depmod -a %{kernel_version}
+
+%files
+%defattr(644,root,root,755)
+/usr/lib/modules/%{kernel_version}/extra/bcachefs.ko.xz
+/etc/modules-load.d/bcachefs.conf
+EOT
+
+RUN <<EOF
+set -euo pipefail
+cp -pv /var/lib/dkms/bcachefs/$(bcachefs version)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
+rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
+# Wrote: /root/rpmbuild/RPMS/aarch64/bcachefs-kmod-6.17.12-300.fc43.aarch64-1.36.0-1.fc43.aarch64.rpm
+cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
+EOF
+
+FROM base
+#COPY --from=version-query /fedora-version.txt /fedora-version.txt
+COPY --from=builder /root/*.rpm /tmp/
+
+#WORKDIR /etc/yum.repos.d/
+#RUN curl --fail-with-body -O https://copr.fedorainfracloud.org/coprs/ngompa/bcachefs/repo/fedora-43/ngompa-bcachefs-fedora-43.repo
+#RUN curl --fail-with-body -O https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_$(cat /fedora-version.txt)/filesystems:bcachefs:release.repo
+# installing bcachefs-tools from SUSE or COPR also tries to install dkms-bcachefs
+RUN <<EOF
+set -xeuo pipefail
+rpm-ostree install bcachefs-tools /tmp/bcachefs-kmod-*.rpm
+rm -v /tmp/bcachefs-kmod*.rpm
+ostree container commit
+EOF
