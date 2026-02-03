@@ -20,6 +20,10 @@ on:
         required: false
         type: string
         default: "zfs-version-should-have-been-set-here"
+      BCACHEFS_VERSION: # used in tags
+        required: false
+        type: string
+        default: "bcachefs-version-should-have-been-set-here"
 
 # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs
 env:
@@ -54,8 +58,10 @@ jobs:
         id: setup-vars
         run: |
           IMAGE_FULL_NAME="${{ env.registry }}/${{ github.repository }}/${{ inputs.image_name }}"
+          TAG_SUFFIX="${{ inputs.image_name == 'zfs' && format('-{0}', inputs.ZFS_VERSION) || (inputs.image_name == 'bcachefs' && format('-{0}', inputs.BCACHEFS_VERSION) || '' }}"
 
           echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a $GITHUB_OUTPUT
+          echo "TAG_SUFFIX=$TAG_SUFFIX" | tee -a $GITHUB_OUTPUT
 
     outputs:
       IMAGE_FULL_NAME: ${{ steps.setup-vars.outputs.IMAGE_FULL_NAME }}
@@ -76,6 +82,7 @@ jobs:
 
     env:
       IMAGE_FULL_NAME: ${{needs.setup-env.outputs.IMAGE_FULL_NAME}}
+      TAG_SUFFIX: ${{needs.setup-env.outputs.TAG_SUFFIX}}
 
     steps:
       - name: Set env.PLATFORM_PAIR for this job
@@ -109,14 +116,12 @@ jobs:
       - name: "Define image metadata: ${{ inputs.image_name }}"
         id: meta
         uses: docker/metadata-action@v5
-        env:
-          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', inputs.ZFS_VERSION) || '' }}
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           tags: |
             type=raw,value=${{ inputs.stream }}
             type=raw,value=latest,enable=${{ inputs.stream == 'stable' }}
-            type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.tag_suffix }}
+            type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.TAG_SUFFIX }}
 
       # https://github.com/docker/build-push-action
       - name: "Build Docker image: ${{ inputs.image_name }}"
@@ -200,8 +205,6 @@ jobs:
       - name: "Define image metadata"
         id: meta
         uses: docker/metadata-action@v5
-        env:
-          tag_suffix: ${{ inputs.image_name == 'zfs' && format('-{0}', inputs.ZFS_VERSION) || '' }}
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           # creates 3 tags.
@@ -210,7 +213,7 @@ jobs:
           tags: |
             type=raw,value=${{ inputs.stream }}
             type=raw,value=latest,enable=${{ inputs.stream == 'stable' }}
-            type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.tag_suffix }}
+            type=raw,value=${{ inputs.FCOS_VERSION }}${{ env.TAG_SUFFIX }}
           # default labels: https://github.com/opencontainers/image-spec/blob/main/annotations.md
           # labels are deprecated, use annotations
 

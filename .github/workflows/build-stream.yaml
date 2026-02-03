@@ -17,10 +17,12 @@ jobs:
           FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
+          BCACHEFS_VERSION=$(curl -s https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
 
           echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
           echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
           echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a $GITHUB_OUTPUT
 
       - name: check if base tags exist
         id: tag-exists-base
@@ -38,13 +40,23 @@ jobs:
           repository: ${{ github.repository }}/zfs
           tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}-${{ steps.get-vers.outputs.ZFS_VERSION }}
 
+      - name: check if bcachefs tags exist
+        id: tag-exists-bcachefs
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ghcr.io
+          repository: ${{ github.repository }}/bcachefs
+          tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}-${{ steps.get-vers.outputs.BCACHEFS_VERSION }}
+
     outputs:
       # Export each variable individually as a job output
       FCOS_VERSION: ${{ steps.get-vers.outputs.FCOS_VERSION }}
       BUILDER_VERSION: ${{ steps.get-vers.outputs.BUILDER_VERSION }}
       ZFS_VERSION: ${{ steps.get-vers.outputs.ZFS_VERSION }}
+      BCACHEFS_VERSION: ${{ steps.get-vers.outputs.BCACHEFS_VERSION }}
       base-tag-exists: ${{ steps.tag-exists-base.outputs.tag == 'found' }}
       zfs-tag-exists: ${{ steps.tag-exists-zfs.outputs.tag == 'found' }}
+      bcachefs-tag-exists: ${{ steps.tag-exists-bcachefs.outputs.tag == 'found' }}
 
   build-base:
     needs: pull-build-vars
@@ -73,4 +85,19 @@ jobs:
         BASE_IMAGE=ghcr.io/${{ github.repository }}/base:${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
         BUILDER_VERSION=${{ needs.pull-build-vars.outputs.BUILDER_VERSION }}
         ZFS_VERSION=${{ needs.pull-build-vars.outputs.ZFS_VERSION }}
+    secrets: inherit
+
+  build-bcachefs:
+    needs:
+      - pull-build-vars
+      - build-base
+    uses: ./.github/workflows/build-multiarch-image.yaml
+    if: ${{ needs.pull-build-vars.outputs.bcachefs-tag-exists == 'false' }}
+    with:
+      stream: ${{ inputs.stream }}
+      image_name: bcachefs
+      FCOS_VERSION: ${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
+      build_args: |
+        BASE_IMAGE=ghcr.io/${{ github.repository }}/base:${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
+        BCACHEFS_VERSION=${{ needs.pull-build-vars.outputs.BCACHEFS_VERSION }}
     secrets: inherit
