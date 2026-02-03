@@ -58,7 +58,12 @@ jobs:
         id: setup-vars
         run: |
           IMAGE_FULL_NAME="${{ env.registry }}/${{ github.repository }}/${{ inputs.image_name }}"
-          TAG_SUFFIX="${{ inputs.image_name == 'zfs' && format('-{0}', inputs.ZFS_VERSION) || (inputs.image_name == 'bcachefs' && format('-{0}', inputs.BCACHEFS_VERSION) || '' }}"
+          TAG_SUFFIX=""
+          if [ "${{ inputs.image_name }}" = "zfs" ]; then
+            TAG_SUFFIX="-${{ inputs.ZFS_VERSION }}"
+          elif [ "${{ inputs.image_name }}" = "bcachefs" ]; then
+            TAG_SUFFIX="-${{ inputs.BCACHEFS_VERSION }}"
+          fi
 
           echo "IMAGE_FULL_NAME=$IMAGE_FULL_NAME" | tee -a $GITHUB_OUTPUT
           echo "TAG_SUFFIX=$TAG_SUFFIX" | tee -a $GITHUB_OUTPUT
