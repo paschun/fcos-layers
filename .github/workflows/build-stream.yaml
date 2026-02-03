@@ -60,33 +60,6 @@ jobs:
       zfs-tag-exists: ${{ steps.tag-exists-zfs.outputs.tag == 'found' }}
       bcachefs-tag-exists: ${{ steps.tag-exists-bcachefs.outputs.tag == 'found' }}
 
-  inspect:
-    needs: pull-build-vars
-    runs-on: ubuntu-latest
-    steps:
-      - name: debug
-        run: |
-          echo ${{ needs.pull-build-vars.outputs.base-tag-exists == 'false' }}
-          echo ${{ needs.pull-build-vars.outputs.base-tag-exists }}
-
-  truu:
-    needs: pull-build-vars
-    runs-on: ubuntu-latest
-    if: ${{ needs.pull-build-vars.outputs.base-tag-exists }}
-    steps:
-      - name: truuu
-        run: |
-          echo truuu
-
-  nooo:
-    needs: pull-build-vars
-    runs-on: ubuntu-latest
-    if: ${{ needs.pull-build-vars.outputs.base-tag-exists == 'false' }}
-    steps:
-      - name: nooo
-        run: |
-          echo nooo
-
   build-base:
     needs: pull-build-vars
     uses: ./.github/workflows/build-multiarch-image.yaml
@@ -104,7 +77,9 @@ jobs:
       - pull-build-vars
       - build-base
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: ${{ needs.pull-build-vars.outputs.zfs-tag-exists == 'false' }}
+    # default status check of success() is automatically applied to if conditions that don't contain a status check function
+    # run if build-base image exists but zfs image doesnt
+    if: always() && needs.pull-build-vars.result == 'success' && (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') && needs.pull-build-vars.outputs.zfs-tag-exists == 'false'
     with:
       stream: ${{ inputs.stream }}
       image_name: zfs
@@ -121,7 +96,7 @@ jobs:
       - pull-build-vars
       - build-base
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: ${{ needs.pull-build-vars.outputs.bcachefs-tag-exists == 'false' }}
+    if: always() && needs.pull-build-vars.result == 'success' && needs.build-base.result != 'failed' && needs.build-base.result != 'cancelled' && needs.pull-build-vars.outputs.zfs-tag-exists == 'false'
     with:
       stream: ${{ inputs.stream }}
       image_name: bcachefs
