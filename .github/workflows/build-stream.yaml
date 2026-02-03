@@ -47,6 +47,8 @@ jobs:
           registry: ghcr.io
           repository: ${{ github.repository }}/bcachefs
           tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}-${{ steps.get-vers.outputs.BCACHEFS_VERSION }}
+        # in case image doesn't exist yet
+        continue-on-error: true
 
     outputs:
       # Export each variable individually as a job output
@@ -57,6 +59,33 @@ jobs:
       base-tag-exists: ${{ steps.tag-exists-base.outputs.tag == 'found' }}
       zfs-tag-exists: ${{ steps.tag-exists-zfs.outputs.tag == 'found' }}
       bcachefs-tag-exists: ${{ steps.tag-exists-bcachefs.outputs.tag == 'found' }}
+
+  inspect:
+    needs: pull-build-vars
+    runs-on: ubuntu-latest
+    steps:
+      - name: debug
+        run: |
+          echo ${{ needs.pull-build-vars.outputs.base-tag-exists == 'false' }}
+          echo ${{ needs.pull-build-vars.outputs.base-tag-exists }}
+
+  truu:
+    needs: pull-build-vars
+    runs-on: ubuntu-latest
+    if: ${{ needs.pull-build-vars.outputs.base-tag-exists }}
+    steps:
+      - name: truuu
+        run: |
+          echo truuu
+
+  nooo:
+    needs: pull-build-vars
+    runs-on: ubuntu-latest
+    if: ${{ needs.pull-build-vars.outputs.base-tag-exists == 'false' }}
+    steps:
+      - name: nooo
+        run: |
+          echo nooo
 
   build-base:
     needs: pull-build-vars
