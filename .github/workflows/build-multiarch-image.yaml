@@ -70,6 +70,7 @@ jobs:
 
     outputs:
       IMAGE_FULL_NAME: ${{ steps.setup-vars.outputs.IMAGE_FULL_NAME }}
+      TAG_SUFFIX: ${{ steps.setup-vars.outputs.TAG_SUFFIX }}
 
   build-each:
     needs: setup-env

@@ -24,31 +24,16 @@ jobs:
           echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
           echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a $GITHUB_OUTPUT
 
-      - name: check if base tags exist
-        id: tag-exists-base
-        uses: tyriis/docker-image-tag-exists@v2.1.0
-        with:
-          registry: ghcr.io
-          repository: ${{ github.repository }}/base
-          tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}
+          set -x
+          ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
+          AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
+          BASE_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/base/tags/list" | jq ".tags | any(. == \"$FCOS_VERSION\")")
+          ZFS_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/zfs/tags/list" | jq ".tags | any(. == \"$FCOS_VERSION-$ZFS_VERSION\")")
+          BCACHEFS_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/bcachefs/tags/list" | jq ".tags | any(. == \"$FCOS_VERSION-$BCACHEFS_VERSION\")")
 
-      - name: check if zfs tags exist
-        id: tag-exists-zfs
-        uses: tyriis/docker-image-tag-exists@v2.1.0
-        with:
-          registry: ghcr.io
-          repository: ${{ github.repository }}/zfs
-          tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}-${{ steps.get-vers.outputs.ZFS_VERSION }}
-
-      - name: check if bcachefs tags exist
-        id: tag-exists-bcachefs
-        uses: tyriis/docker-image-tag-exists@v2.1.0
-        with:
-          registry: ghcr.io
-          repository: ${{ github.repository }}/bcachefs
-          tag: ${{ steps.get-vers.outputs.FCOS_VERSION }}-${{ steps.get-vers.outputs.BCACHEFS_VERSION }}
-        # in case image doesn't exist yet
-        continue-on-error: true
+          echo "BASE_TAG_EXISTS=$BASE_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
+          echo "ZFS_TAG_EXISTS=$ZFS_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
+          echo "BCACHEFS_TAG_EXISTS=$BCACHEFS_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
 
     outputs:
       # Export each variable individually as a job output
@@ -56,14 +41,14 @@ jobs:
       BUILDER_VERSION: ${{ steps.get-vers.outputs.BUILDER_VERSION }}
       ZFS_VERSION: ${{ steps.get-vers.outputs.ZFS_VERSION }}
       BCACHEFS_VERSION: ${{ steps.get-vers.outputs.BCACHEFS_VERSION }}
-      base-tag-exists: ${{ steps.tag-exists-base.outputs.tag == 'found' }}
-      zfs-tag-exists: ${{ steps.tag-exists-zfs.outputs.tag == 'found' }}
-      bcachefs-tag-exists: ${{ steps.tag-exists-bcachefs.outputs.tag == 'found' }}
+      BASE_TAG_EXISTS: ${{ steps.get-vers.outputs.BASE_TAG_EXISTS }}
+      ZFS_TAG_EXISTS: ${{ steps.get-vers.outputs.ZFS_TAG_EXISTS }}
+      BCACHEFS_TAG_EXISTS: ${{ steps.get-vers.outputs.BCACHEFS_TAG_EXISTS }}
 
   build-base:
     needs: pull-build-vars
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: ${{ needs.pull-build-vars.outputs.base-tag-exists == 'false' }}
+    if: ! needs.pull-build-vars.outputs.BASE_TAG_EXISTS
     with:
       stream: ${{ inputs.stream }}
       image_name: base
@@ -77,9 +62,10 @@ jobs:
       - pull-build-vars
       - build-base
     uses: ./.github/workflows/build-multiarch-image.yaml
-    # default status check of success() is automatically applied to if conditions that don't contain a status check function
+    # default status check of success() is automatically applied to `if:` conditions that don't contain a status check function
+    # possible result states: success, failure, cancelled, or skipped.
     # run if build-base image exists but zfs image doesnt
-    if: always() && needs.pull-build-vars.result == 'success' && (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') && needs.pull-build-vars.outputs.zfs-tag-exists == 'false'
+    if: always() && needs.pull-build-vars.result == 'success' && needs.build-base.result != 'failure' && needs.build-base.result != 'cancelled' && ! needs.pull-build-vars.outputs.ZFS_TAG_EXISTS
     with:
       stream: ${{ inputs.stream }}
       image_name: zfs
@@ -96,7 +82,7 @@ jobs:
       - pull-build-vars
       - build-base
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: always() && needs.pull-build-vars.result == 'success' && needs.build-base.result != 'failed' && needs.build-base.result != 'cancelled' && needs.pull-build-vars.outputs.zfs-tag-exists == 'false'
+    if: always() && needs.pull-build-vars.result == 'success' && needs.build-base.result != 'failure' && needs.build-base.result != 'cancelled' && ! needs.pull-build-vars.outputs.BCACHEFS_TAG_EXISTS
     with:
       stream: ${{ inputs.stream }}
       image_name: bcachefs
