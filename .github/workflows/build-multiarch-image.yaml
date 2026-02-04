@@ -188,6 +188,7 @@ jobs:
       - build-each
     env:
       IMAGE_FULL_NAME: ${{needs.setup-env.outputs.IMAGE_FULL_NAME}}
+      TAG_SUFFIX: ${{needs.setup-env.outputs.TAG_SUFFIX}}
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
