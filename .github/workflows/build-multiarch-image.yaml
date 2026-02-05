@@ -98,7 +98,7 @@ jobs:
           echo "PLATFORM_PAIR=${PLATFORM//\//-}" | tee -a $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
