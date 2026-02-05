@@ -157,7 +157,7 @@ jobs:
           touch "${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/${digest}"
 
       - name: Upload digests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: digests-${{ inputs.image_name }}-${{ inputs.stream }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/*
