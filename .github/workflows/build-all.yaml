@@ -28,5 +28,5 @@ jobs:
     uses: ./.github/workflows/build-stream.yaml
     with:
       stream: ${{ matrix.stream }}
-      force-build: ${{ inputs.force-build }}
+      force-build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force-build, false) }}
     secrets: inherit
