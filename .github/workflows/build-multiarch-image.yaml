@@ -236,7 +236,7 @@ jobs:
       - name: Sign the multi-arch manifest
         run: |
           # --recursive to sign all images inside manifest
-          cosign sign --key 'env://COSIGN_KEY' --yes "$IMAGE_FULL_NAME@$DIGEST"
+          cosign sign --verbose --key 'env://COSIGN_KEY' --yes "$IMAGE_FULL_NAME@$DIGEST"
         env:
           COSIGN_KEY: ${{ secrets.SIGNING_SECRET }}
           # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable
