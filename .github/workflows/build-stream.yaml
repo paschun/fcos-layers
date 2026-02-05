@@ -53,7 +53,7 @@ jobs:
   build-base:
     needs: pull-build-vars
     uses: ./.github/workflows/build-multiarch-image.yaml
-    if: needs.pull-build-vars.outputs.BASE_TAG_EXISTS == 'false' || inputs.force.build
+    if: needs.pull-build-vars.outputs.BASE_TAG_EXISTS == 'false' || inputs.force-build
     with:
       stream: ${{ inputs.stream }}
       image_name: base
