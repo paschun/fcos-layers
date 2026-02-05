@@ -1,0 +1,34 @@
+{
+  "default": [
+    {
+      "type": "insecureAcceptAnything"
+    }
+  ],
+  "transports": {
+    "docker": {
+      "ghcr.io/paschun": [
+        {
+          "type": "sigstoreSigned",
+          "keyPaths": [
+            "/usr/etc/pki/containers/paschun.pub"
+          ],
+          "signedIdentity": {
+            "type": "matchRepository"
+          }
+        }
+      ],
+      "": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]
+    },
+    "docker-daemon": {
+      "": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]
+    }
+  }
+}

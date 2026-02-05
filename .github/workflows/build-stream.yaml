@@ -14,6 +14,8 @@ jobs:
       - name: Get versions to build
         id: get-vers
         run: |
+          set -euo pipefail
+
           FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)

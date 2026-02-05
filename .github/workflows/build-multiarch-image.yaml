@@ -100,10 +100,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # https://github.com/sigstore/cosign-installer
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
-
       # Set up BuildKit Docker container builder to be able to build-push and export cache
       # Needed for annotations
       # https://github.com/docker/setup-buildx-action
@@ -156,30 +152,13 @@ jobs:
           digest="${digest#sha256:}"
           touch "${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/${digest}"
 
-      - name: Upload digests
+      - name: Upload digests to artifact store to use in next job
         uses: actions/upload-artifact@v6
         with:
           name: digests-${{ inputs.image_name }}-${{ inputs.stream }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/*
           if-no-files-found: error
           retention-days: 1
-
-      # Sign the resulting Docker images digests.
-      # This will only write to the public Rekor transparency log when the Docker repository is public to avoid leaking data.
-      # https://github.com/sigstore/cosign
-      - name: Sign the published Docker images
-        # step disabled for now
-        if: false
-        env:
-          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
-          TAGS_BASE: ${{ steps.meta-base.outputs.tags }}
-          TAGS_ZFS: ${{ steps.meta-zfs.outputs.tags }}
-          DIGEST_BASE: ${{ steps.build-and-push-base.outputs.digest }}
-          DIGEST_ZFS: ${{ steps.build-and-push-zfs.outputs.digest }}
-        # This step uses the identity token to provision an ephemeral certificate against the sigstore community Fulcio instance.
-        run: |
-          echo "${TAGS_BASE}" | xargs -I {} cosign sign --yes {}@${DIGEST_BASE}
-          echo "${TAGS_ZFS}" | xargs -I {} cosign sign --yes {}@${DIGEST_ZFS}
 
   merge-manifests:
     runs-on: ubuntu-latest
@@ -196,6 +175,9 @@ jobs:
           path: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/
           pattern: digests-${{ inputs.image_name }}-${{ inputs.stream }}-*
           merge-multiple: true
+
+      - name: Show downloaded artifacts
+        run: ls -Rlh '${{ runner.temp }}/digests'
 
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.registry }}
@@ -216,7 +198,7 @@ jobs:
           images: ${{ env.IMAGE_FULL_NAME }}
           # creates 3 tags.
           # `stable` and `latest` when it's run on main branch
-          # `20250101` when this workflow is triggered by a schedule
+          # tagged with FCOS version
           tags: |
             type=raw,value=${{ inputs.stream }}
             type=raw,value=latest,enable=${{ inputs.stream == 'stable' }}
@@ -227,7 +209,9 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests/${{ inputs.image_name }}/${{ inputs.stream }}/
         run: |
-          # jq command preps the tags as -t flags
+          set -xeuo pipefail
+          echo *
+          # jq takes the JSON output from the prev command, extracts the tags, and preps the tags as -t flags
           # printf command formats each filename as a reference to an image digest
           #   *: Expands to all files in the current directory (runner.temp/digests)
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
@@ -236,3 +220,24 @@ jobs:
       - name: Inspect image
         run: |
           docker buildx imagetools inspect "$IMAGE_FULL_NAME:${{ steps.meta.outputs.version }}"
+
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4
+
+      #  Get the digest of the manifest we just created
+      - name: Get manifest digest
+        id: final-digest
+        run: |
+          set -xeuo pipefail
+          DIGEST=$(docker buildx imagetools inspect --format '{{json .Manifest}}' "$IMAGE_FULL_NAME:${{ steps.meta.outputs.version }}" | jq -r .digest)
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+
+      - name: Sign the multi-arch manifest
+        run: |
+          # --recursive to sign all images inside manifest
+          cosign sign --key 'env://COSIGN_KEY' --yes "$IMAGE_FULL_NAME@$DIGEST"
+        env:
+          COSIGN_KEY: ${{ secrets.SIGNING_SECRET }}
+          # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable
+          DIGEST: ${{ steps.final-digest.outputs.digest }}

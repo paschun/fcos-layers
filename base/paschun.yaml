@@ -1,0 +1,3 @@
+docker:
+  ghcr.io/paschun:
+    use-sigstore-attachments: true
