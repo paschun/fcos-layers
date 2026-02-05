@@ -24,7 +24,6 @@ jobs:
           echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
           echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a $GITHUB_OUTPUT
 
-          set -x
           ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
           AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
           BASE_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/base/tags/list" | jq ".tags | any(. == \"$FCOS_VERSION\")")
@@ -87,7 +86,8 @@ jobs:
       stream: ${{ inputs.stream }}
       image_name: bcachefs
       FCOS_VERSION: ${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
+      BCACHEFS_VERSION: ${{ needs.pull-build-vars.outputs.BCACHEFS_VERSION }}
+      # these are passed as args to the Containerfile
       build_args: |
         BASE_IMAGE=ghcr.io/${{ github.repository }}/base:${{ needs.pull-build-vars.outputs.FCOS_VERSION }}
-        BCACHEFS_VERSION=${{ needs.pull-build-vars.outputs.BCACHEFS_VERSION }}
     secrets: inherit
