@@ -223,7 +223,7 @@ jobs:
 
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.0.0
 
       #  Get the digest of the manifest we just created
       - name: Get manifest digest
