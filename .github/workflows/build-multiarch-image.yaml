@@ -140,6 +140,8 @@ jobs:
           platforms: ${{ matrix.platform.docker_arch }}
           tags: ${{ env.IMAGE_FULL_NAME }}
           annotations: ${{ steps.meta.outputs.annotations }}
+          # provenance will add an extra "unknown/unknown" manifest
+          provenance: false
           # https://docs.docker.com/build/exporters/image-registry/
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true,compression=zstd
 
