@@ -143,7 +143,7 @@ jobs:
           # provenance will add an extra "unknown/unknown" manifest
           provenance: false
           # https://docs.docker.com/build/exporters/image-registry/
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true,compression=zstd
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true,compression=zstd,oci-mediatypes=true
 
       # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
       - name: Export digests
