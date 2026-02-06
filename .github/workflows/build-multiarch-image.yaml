@@ -137,7 +137,7 @@ jobs:
           file: ./${{ inputs.image_name }}/Containerfile
           context: ./${{ inputs.image_name }}
           build-args: ${{ inputs.build_args }}
-          cache-from: ${{ case(inputs.disable-cache, 'type=gha', '') }}
+          cache-from: ${{ case(inputs.disable-cache, '', 'type=gha') }}
           cache-to: type=gha,mode=max
           # always pull because old builds are cached under same tags
           pull: true
