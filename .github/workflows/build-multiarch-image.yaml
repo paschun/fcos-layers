@@ -243,6 +243,10 @@ jobs:
       - name: Sign the multi-arch manifest
         run: |
           # --recursive to sign all images inside manifest
+          # As of Feb 2026, OCI 1.1 referrers API currently unsupported by GHCR, and requires COSIGN_EXPERIMENTAL=1
+          # That API would allow to not use tagged manifests to store signature blobs, would clean up the tag list
+          # https://opencontainers.org/posts/blog/2024-03-13-image-and-distribution-1-1/#support-for-existing-registries
+          # check with `oras discover --distribution-spec v1.1-referrers-api`
           cosign sign --verbose --key 'env://COSIGN_KEY' --yes "$IMAGE_FULL_NAME@$DIGEST"
         env:
           COSIGN_KEY: ${{ secrets.SIGNING_SECRET }}

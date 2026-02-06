@@ -117,7 +117,7 @@ COPY --from=builder /root/*.rpm /tmp/
 #WORKDIR /etc/yum.repos.d/
 #RUN curl --fail-with-body -O https://copr.fedorainfracloud.org/coprs/ngompa/bcachefs/repo/fedora-43/ngompa-bcachefs-fedora-43.repo
 #RUN curl --fail-with-body -O https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_$(cat /fedora-version.txt)/filesystems:bcachefs:release.repo
-# installing bcachefs-tools from SUSE or COPR also tries to install dkms-bcachefs. So just install the plain .rpm file
+# installing bcachefs-tools from SUSE or COPR repo also tries to install dkms-bcachefs. So just install the plain .rpm file
 RUN <<EOF
 set -xeuo pipefail
 rpm-ostree install /tmp/bcachefs-*.rpm
