@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      disable-cache:
+        description: 'Disable image build cache'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-stream:
@@ -29,4 +34,5 @@ jobs:
     with:
       stream: ${{ matrix.stream }}
       force-build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force-build, false) }}
+      disable-cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable-cache, false) }}
     secrets: inherit
