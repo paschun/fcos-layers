@@ -3,8 +3,9 @@
 Custom Fedora CoreOS (FCOS) layered images.
 
 - [`base`](#base-image): Includes some cli utils
-- [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
 - [`bcachefs`](#bcachefs-image): Includes bcachefs as a kernel module (built on top of `base`)
+- [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
+- [Install instructions](#install)
 
 These images are based on the upstream images of FCOS.
 
@@ -15,6 +16,77 @@ Upstream currently releases in a 2 week cadence.
 Images are published on GitHub Packages (ghcr.io) and are multi-arch for linux/amd64 and linux/arm64.
 
 You can also extend `FROM` these images in your own `Containerfile` for further customization, if you wish.
+
+## `base` image
+
+Includes:
+
+- Utilities: `pv`, `fd`, `ripgrep`, `procs`, `tree`, `neovim`, `bat`, `ranger`, `btop`, `et`, `tmux`, `tcpdump`, `drill`, `restorecon`, `podman-tui`, `restic`, `rclone`, `uv`, `parted`, `ncat`, `buildah`, `mtr`, `inxi`, `gdu`, `7zip`, `strace`, `xxhash`, `fish`
+- `python3` and `nodejs` are pulled in as dependencies of the above.
+- Maybe more utils, check the Containerfile
+- Config files necessary to verify the signature on images from this repo
+
+Image:
+
+```text
+ghcr.io/paschun/fcos-layers/base:stable
+```
+
+Tags:
+
+- `:stable`
+- `:testing`
+- `:next`
+- Each FCOS version number is tagged, like `:43.20260119.3.1`
+- `:latest` -> `:stable`
+
+[Containerfile](./base/Containerfile)
+
+## `bcachefs` image
+
+Includes:
+
+- Everything in Base
+- Latest bcachefs as a kernel module
+
+Image:
+
+```text
+ghcr.io/paschun/fcos-layers/bcachefs:stable
+```
+
+Tags:
+
+- `:stable`
+- `:testing`
+- `:next`
+- FCOS-bcachefs version number, like `:43.20260119.3.1-1.36.0`
+- `:latest` -> `:stable`
+
+[Containerfile](./bcachefs/Containerfile)
+
+## `zfs` image
+
+Includes:
+
+- Everything in Base
+- Latest ZFS as a kernel module
+
+Image:
+
+```text
+ghcr.io/paschun/fcos-layers/zfs:stable
+```
+
+Tags:
+
+- `:stable`
+- `:testing`
+- `:next`
+- FCOS-ZFS version number, like `:43.20260119.3.1-2.4.0`
+- `:latest` -> `:stable`
+
+[Containerfile](./zfs/Containerfile)
 
 ## Install
 
@@ -45,75 +117,3 @@ And instead enable the built-in:
 > systemctl enable --now rpm-ostreed-automatic.timer
 ```
 You can see what it will do with `systemctl cat rpm-ostreed-automatic.{timer,service}`. It just runs `rpm-ostree upgrade` once a day.
-
-## `base` image
-
-Includes:
-
-- Utilities: `pv`, `fd`, `ripgrep`, `procs`, `tree`, `neovim`, `bat`, `ranger`, `btop`, `et`, `tmux`, `tcpdump`, `drill`, `restorecon`, `podman-tui`, `restic`, `rclone`, `uv`, `parted`, `ncat`, `buildah`, `mtr`, `inxi`, `gdu`, `7zip`, `strace`, `xxhash`, `fish`
-- `python3` and `nodejs` are pulled in as dependencies of the above.
-- Maybe more utils, check the Containerfile
-- Config files necessary to verify the signature on images from this repo
-
-Image:
-
-```text
-ghcr.io/paschun/fcos-layers/base:stable
-```
-
-Tags:
-
-- `:stable`
-- `:testing`
-- `:next`
-- Each FCOS version number is tagged, like `:43.20260119.3.1`
-- `:latest` -> `:stable`
-
-[Containerfile](./base/Containerfile)
-
-## `zfs` image
-
-Includes:
-
-- Everything in Base
-- Latest ZFS as a kernel module
-
-Image:
-
-```text
-ghcr.io/paschun/fcos-layers/zfs:stable
-```
-
-Tags:
-
-- `:stable`
-- `:testing`
-- `:next`
-- FCOS-ZFS version number, like `:43.20260119.3.1-2.4.0`
-- `:latest` -> `:stable`
-
-[Containerfile](./zfs/Containerfile)
-
-## `bcachefs` image
-
-Includes:
-
-- Everything in Base
-- Latest bcachefs as a kernel module
-
-Image:
-
-```text
-ghcr.io/paschun/fcos-layers/bcachefs:stable
-```
-
-Tags:
-
-- `:stable`
-- `:testing`
-- `:next`
-- FCOS-bcachefs version number, like `:43.20260119.3.1-1.36.0`
-- `:latest` -> `:stable`
-
-[Containerfile](./bcachefs/Containerfile)
-
