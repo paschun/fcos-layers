@@ -32,13 +32,28 @@ So after getting the signature config files via a first unverified rebase, you c
 > sudo rpm-ostree rebase --bypass-driver --reboot ostree-image-signed:docker://ghcr.io/paschun/fcos-layers/bcachefs:stable
 ```
 
+### Automatic updates
+
+If you are coming from vanilla FCOS, it uses [Zincati](https://coreos.github.io/zincati/usage/auto-updates/) by default for updates. Zincati depends on a [Cincinnati](https://github.com/openshift/cincinnati) service that runs on Fedora servers. The Zincati client uses it to see if an update is available, and if so, it runs `rpm-ostree upgrade`.
+
+After rebasing, you can't use Zincati anymore. So disable it:
+```sh
+> systemctl disable --now zincati.service
+```
+And instead enable the built-in:
+```sh
+> systemctl enable --now rpm-ostreed-automatic.timer
+```
+You can see what it will do with `systemctl cat rpm-ostreed-automatic.{timer,service}`. It just runs `rpm-ostree upgrade` once a day.
+
 ## `base` image
 
 Includes:
 
-- Utilities: `pv`, `kitty`, `fd-find`, `ripgrep`, `procs`, `tree`, `neovim`, `bat`, `man-db`, `ranger`, `btop`, `et`, `tmux`, `tcpdump`, `drill`, `restorecon`, `qemu-guest-agent`, `podman-tui`, `restic`, `rclone`, `uv`, `parted`, `nmap-ncat`, `buildah`, `mtr`, `inxi`, `gdu`, `7zip`, `strace`, `xxhash`, `fish`
+- Utilities: `pv`, `fd`, `ripgrep`, `procs`, `tree`, `neovim`, `bat`, `ranger`, `btop`, `et`, `tmux`, `tcpdump`, `drill`, `restorecon`, `podman-tui`, `restic`, `rclone`, `uv`, `parted`, `ncat`, `buildah`, `mtr`, `inxi`, `gdu`, `7zip`, `strace`, `xxhash`, `fish`
 - `python3` and `nodejs` are pulled in as dependencies of the above.
-- Maybe more, check the Containerfile
+- Maybe more utils, check the Containerfile
+- Config files necessary to verify the signature on images from this repo
 
 Image:
 
