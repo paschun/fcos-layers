@@ -6,6 +6,7 @@ Custom Fedora CoreOS (FCOS) layered images.
   - [`bcachefs`](#bcachefs-image): Includes bcachefs as a kernel module (built on top of `base`)
   - [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
 - [Install instructions](#install)
+- [Manually verify signature](#manually-verify-signature)
 
 These images are based on the upstream images of FCOS.
 
@@ -117,3 +118,10 @@ And instead enable the built-in:
 > systemctl enable --now rpm-ostreed-automatic.timer
 ```
 You can see what it will do with `systemctl cat rpm-ostreed-automatic.{timer,service}`. It just runs `rpm-ostree upgrade` once a day.
+
+## Manually verify signature
+
+The image manifests are signed with [cosign](https://docs.sigstore.dev/about/overview/). To verify them yourself, get the public key in `base/paschun.pub`, and run:
+```sh
+> cosign verify --key paschun.pub ghcr.io/paschun/fcos-layers/bcachefs:stable
+```
