@@ -3,8 +3,8 @@
 Custom Fedora CoreOS (FCOS) layered images.
 
 - [`base`](#base-image): Includes some cli utils
-- [`bcachefs`](#bcachefs-image): Includes bcachefs as a kernel module (built on top of `base`)
-- [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
+  - [`bcachefs`](#bcachefs-image): Includes bcachefs as a kernel module (built on top of `base`)
+  - [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
 - [Install instructions](#install)
 
 These images are based on the upstream images of FCOS.
