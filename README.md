@@ -10,7 +10,7 @@ Custom Fedora CoreOS (FCOS) layered images.
 
 These images are based on the upstream images of FCOS.
 
-Images are built and tagged using GitHub Actions every time a FCOS stream is updated: stable, testing, and next.
+Images are built and tagged using GitHub Actions every time a FCOS stream is updated: stable, testing, and next. Or when a new version of bcachefs or zfs is released.
 
 Upstream currently releases in a 2 week cadence.
 
@@ -19,6 +19,8 @@ Images are published on GitHub Packages (ghcr.io) and are multi-arch for linux/a
 You can also extend `FROM` these images in your own `Containerfile` for further customization, if you wish.
 
 ## `base` image
+
+`FROM fedora-coreos`
 
 Includes:
 
@@ -45,6 +47,8 @@ Tags:
 
 ## `bcachefs` image
 
+`FROM base`
+
 Includes:
 
 - Everything in Base
@@ -67,6 +71,8 @@ Tags:
 [Containerfile](./bcachefs/Containerfile)
 
 ## `zfs` image
+
+`FROM base`
 
 Includes:
 
@@ -107,7 +113,7 @@ So after getting the signature config files via a first unverified rebase, you c
 
 ### Automatic updates
 
-If you are coming from vanilla FCOS, it uses [Zincati](https://coreos.github.io/zincati/usage/auto-updates/) by default for updates. Zincati depends on a [Cincinnati](https://github.com/openshift/cincinnati) service that runs on Fedora servers. The Zincati client uses it to see if an update is available, and if so, it runs `rpm-ostree upgrade`.
+If you are coming from vanilla FCOS, it uses [Zincati](https://coreos.github.io/zincati/usage/auto-updates/) by default for updates. Zincati depends on a [Cincinnati](https://github.com/coreos/fedora-coreos-cincinnati) service that runs on Fedora servers. The Zincati client uses it to see if an update is available, and if so, it runs `rpm-ostree upgrade`.
 
 After rebasing, you can't use Zincati anymore. So disable it:
 ```sh

@@ -149,6 +149,8 @@ jobs:
           provenance: false
           # https://docs.docker.com/build/exporters/image-registry/
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true,compression=zstd,oci-mediatypes=true
+      # https://github.com/redhat-actions/buildah-build
+      # https://github.com/redhat-actions/push-to-registry
 
       # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
       - name: Export digests

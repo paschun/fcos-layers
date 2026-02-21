@@ -1,12 +1,11 @@
-# https://gitlab.com/fedora/bootc/examples/-/blob/main/kernel-module/Containerfile?ref_type=heads
+# https://gitlab.com/fedora/bootc/examples/-/blob/main/kernel-module/Containerfile
 # https://wiki.centos.org/HowTos(2f)BuildingKernelModules.html#Building_a_kernel_module_rpm_package_.28kmod.29
-# https://koji.fedoraproject.org/koji/packageinfo?packageID=38974
 # https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs
 # https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_43/filesystems:bcachefs:release.repo
 
 # could try quay.io/bootc-devel/fedora-bootc-43-standard
 ARG BUILDER_IMAGE=quay.io/fedora/fedora:latest
-# Base image for the final layer
+# Base image for the final stage
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 
 FROM ${BASE_IMAGE} AS base
@@ -74,7 +73,7 @@ Version:        %{module_version}
 Release:        %{rpm_release}%{?dist}
 Summary:        bcachefs kernel module
 
-License:        GPL
+License:        GPL-2.0-only
 Source0:        %{_sourcedir}/bcachefs.ko.xz
 
 BuildArch:      $(cat /arch.txt)
