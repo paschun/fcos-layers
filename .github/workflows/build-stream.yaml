@@ -26,10 +26,10 @@ jobs:
         run: |
           set -xeuo pipefail
 
-          FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
+          FCOS_VERSION=$(curl -sS "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
-          ZFS_VERSION=$(curl -s "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
-          BCACHEFS_VERSION=$(curl -s https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
+          ZFS_VERSION=$(curl -sS "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
+          BCACHEFS_VERSION=$(curl -sS https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
 
           echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
           echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
@@ -39,9 +39,9 @@ jobs:
           ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
           AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
           # can also add &last=$VER . If returned .tags == null , then tag doesnt exist.
-          BASE_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/base/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION\")")
-          ZFS_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/zfs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$ZFS_VERSION\")")
-          BCACHEFS_TAG_EXISTS=$(curl -s -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/bcachefs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$BCACHEFS_VERSION\")")
+          BASE_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/base/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION\")")
+          ZFS_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/zfs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$ZFS_VERSION\")")
+          BCACHEFS_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/bcachefs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$BCACHEFS_VERSION\")")
 
           echo "BASE_TAG_EXISTS=$BASE_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
           echo "ZFS_TAG_EXISTS=$ZFS_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
