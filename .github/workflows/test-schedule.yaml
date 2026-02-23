@@ -4,10 +4,10 @@ name: test schedule
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "19 * * * *"
 #  push:
 #    branches: ["main"]
-#  workflow_dispatch:
+  workflow_dispatch:
 #    inputs:
 #      force-build:
 #        description: "Build all images even if they already exist"
@@ -22,16 +22,8 @@ on:
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        stream:
-          - stable
-          - testing
-          - next
-
     runs-on: ubuntu-latest
     steps:
       - name: echo
         run: |
-          echo 'hello ${{ matrix.stream }}'
+          echo 'hello there'
