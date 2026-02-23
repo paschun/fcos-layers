@@ -24,7 +24,7 @@ jobs:
       - name: Get versions to build
         id: get-vers
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
 
           FCOS_VERSION=$(curl -s "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
