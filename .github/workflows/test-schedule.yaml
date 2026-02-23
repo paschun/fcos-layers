@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: test schedule
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  push:
+    branches: ["main"]
+#  workflow_dispatch:
+#    inputs:
+#      force-build:
+#        description: "Build all images even if they already exist"
+#        required: false
+#        type: boolean
+#        default: false
+#      disable-cache:
+#        description: "Disable image build cache"
+#        required: false
+#        type: boolean
+#        default: false
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        stream:
+          - stable
+          - testing
+          - next
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: echo
+        run: |
+          echo 'hello ${{ matrix.stream }}'
