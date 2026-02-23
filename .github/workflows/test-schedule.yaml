@@ -4,7 +4,7 @@ name: test schedule
 
 on:
   schedule:
-    - cron: "19 * * * *"
+    - cron: "19 */2 * * *"
 #  push:
 #    branches: ["main"]
   workflow_dispatch:
