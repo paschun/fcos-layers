@@ -5,20 +5,20 @@ name: test schedule
 on:
   schedule:
     - cron: "19 */2 * * *"
-#  push:
-#    branches: ["main"]
+  push:
+    branches: ["main"]
   workflow_dispatch:
-#    inputs:
-#      force-build:
-#        description: "Build all images even if they already exist"
-#        required: false
-#        type: boolean
-#        default: false
-#      disable-cache:
-#        description: "Disable image build cache"
-#        required: false
-#        type: boolean
-#        default: false
+    inputs:
+      force-build:
+        description: "Build all images even if they already exist"
+        required: false
+        type: boolean
+        default: false
+      disable-cache:
+        description: "Disable image build cache"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   test:
