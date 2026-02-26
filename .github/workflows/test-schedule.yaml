@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: echo
-        with:
+        env:
           stream: ${{ matrix.stream }}
           force-build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force-build || false, false) }}
           disable-cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable-cache || false, false) }}
