@@ -33,14 +33,18 @@ jobs:
 
     #name: Build ${{ matrix.stream }}
     #uses: ./.github/workflows/build-stream.yaml
-    #with:
-    #  stream: ${{ matrix.stream }}
-    #  force-build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force-build || false, false) }}
-    #  disable-cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable-cache || false, false) }}
     #secrets: inherit
 
     runs-on: ubuntu-latest
     steps:
       - name: echo
+        with:
+          stream: ${{ matrix.stream }}
+          force-build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force-build || false, false) }}
+          disable-cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable-cache || false, false) }}
         run: |
-          echo 'hello there ${{ matrix.stream }}'
+          echo 'matrix.stream: ${{ matrix.stream }}'
+          env|sort
+          #echo 'stream: ${{ env.STREAM }}'
+          #echo 'force-build: ${{ env.FORCE-BUILD }}'
+          #echo 'disable-cache: ${{ env.DISABLE-CACHE }}'
