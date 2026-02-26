@@ -21,6 +21,9 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: ${{ github.workflow }}
+
 jobs:
   build-stream:
     strategy:
