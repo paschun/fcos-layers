@@ -29,7 +29,7 @@ jobs:
           FCOS_VERSION=$(curl -sS "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -sS "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
-          BCACHEFS_VERSION=$(sleep $((RANDOM % 5 + 1)) && curl -sS --retry 2 -m 30 -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36' https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
+          BCACHEFS_VERSION=$(sleep $((RANDOM % 5 + 1)) && curl -sSv --retry 2 -m 30 -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36' https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
 
           echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
           echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
