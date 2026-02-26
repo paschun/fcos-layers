@@ -10,12 +10,12 @@ on:
     branches: ["main"]
   workflow_dispatch:
     inputs:
-      force-build:
+      force_build:
         description: "Build all images even if they already exist"
         required: false
         type: boolean
         default: false
-      disable-cache:
+      disable_cache:
         description: "Disable image build cache"
         required: false
         type: boolean
@@ -38,6 +38,6 @@ jobs:
     uses: ./.github/workflows/build-stream.yaml
     with:
       stream: ${{ matrix.stream }}
-      force-build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force-build || false, false) }}
-      disable-cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable-cache || false, false) }}
+      force_build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force_build || false, false) }}
+      disable_cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable_cache || false, false) }}
     secrets: inherit
