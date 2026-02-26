@@ -38,6 +38,6 @@ jobs:
     uses: ./.github/workflows/build-stream.yaml
     with:
       stream: ${{ matrix.stream }}
-      force_build: ${{ case(github.event_name == 'workflow_dispatch', inputs.force_build || false, false) }}
-      disable_cache: ${{ case(github.event_name == 'workflow_dispatch', inputs.disable_cache || false, false) }}
+      force_build: ${{ inputs.force_build }}
+      disable_cache: ${{ inputs.disable_cache }}
     secrets: inherit
