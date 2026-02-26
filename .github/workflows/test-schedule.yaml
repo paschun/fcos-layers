@@ -45,6 +45,6 @@ jobs:
         run: |
           echo 'matrix.stream: ${{ matrix.stream }}'
           env|sort
-          #echo 'stream: ${{ env.STREAM }}'
-          #echo 'force-build: ${{ env.FORCE-BUILD }}'
-          #echo 'disable-cache: ${{ env.DISABLE-CACHE }}'
+          echo 'stream: ${{ env.stream }}'
+          echo 'force-build: ${{ env.force-build }}'
+          echo 'disable-cache: ${{ env.disable-cache }}'
