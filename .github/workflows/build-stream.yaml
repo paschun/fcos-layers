@@ -32,6 +32,7 @@ jobs:
           curl -4sS https://myip.addr.tools
           ip a
           ip r
+          ip -6 r
           OBS=$(curl -sSv -4 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs || curl -sSv -6 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | tee /dev/stderr)
           BCACHEFS_VERSION=$(echo "$OBS" | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
 
