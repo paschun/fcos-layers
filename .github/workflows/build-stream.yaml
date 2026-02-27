@@ -30,16 +30,15 @@ jobs:
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -sS "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
           curl -4sS https://myip.addr.tools
-          ip a
-          ip r
-          ip -6 r
-          OBS=$(curl -sSv -4 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs || curl -sSv -6 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | tee /dev/stderr)
-          BCACHEFS_VERSION=$(echo "$OBS" | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
+          BCACHEFS_VERSION=$(
+            curl -sSv -4 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | tee /dev/stderr | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1 \
+            || \
+            curl -sSv -4 -m 15 https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/openSUSE_Tumbleweed/src/ | tee /dev/stderr | ggrep -oP '(?<=bcachefs-tools-)[\d\.]{5,20}' | head -n 1)
 
-          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a $GITHUB_OUTPUT
-          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a $GITHUB_OUTPUT
-          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a $GITHUB_OUTPUT
-          echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "FCOS_VERSION=$FCOS_VERSION" | tee -a "$GITHUB_OUTPUT"
+          echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a "$GITHUB_OUTPUT"
+          echo "ZFS_VERSION=$ZFS_VERSION" | tee -a "$GITHUB_OUTPUT"
+          echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a "$GITHUB_OUTPUT"
 
           ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
           AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
@@ -48,9 +47,9 @@ jobs:
           ZFS_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/zfs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$ZFS_VERSION\")")
           BCACHEFS_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/bcachefs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$BCACHEFS_VERSION\")")
 
-          echo "BASE_TAG_EXISTS=$BASE_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
-          echo "ZFS_TAG_EXISTS=$ZFS_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
-          echo "BCACHEFS_TAG_EXISTS=$BCACHEFS_TAG_EXISTS" | tee -a $GITHUB_OUTPUT
+          echo "BASE_TAG_EXISTS=$BASE_TAG_EXISTS" | tee -a "$GITHUB_OUTPUT"
+          echo "ZFS_TAG_EXISTS=$ZFS_TAG_EXISTS" | tee -a "$GITHUB_OUTPUT"
+          echo "BCACHEFS_TAG_EXISTS=$BCACHEFS_TAG_EXISTS" | tee -a "$GITHUB_OUTPUT"
 
     outputs:
       # Export each variable individually as a job output
