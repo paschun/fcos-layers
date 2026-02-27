@@ -30,7 +30,7 @@ jobs:
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -sS "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
           curl -4sS https://myip.addr.tools
-          curl -6sS https://myip.addr.tools
+          ip a
           OBS=$(curl -sSv -4 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs || curl -sSv -6 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | tee /dev/stderr)
           BCACHEFS_VERSION=$(echo "$OBS" | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
 
