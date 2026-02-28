@@ -4,8 +4,8 @@ name: Build all multi-arch images for all coreos streams
 
 on:
   schedule:
-    # https://crontab.guru/#44_3_*_*_*
-    - cron: "41 */2 * * *"
+    # https://crontab.guru/#19_23_*_*_*
+    - cron: "19 23 * * *"
   push:
     branches: ["main"]
   workflow_dispatch:
