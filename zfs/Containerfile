@@ -1,5 +1,5 @@
 # Needs to be set to the Fedora version on CoreOS stable stream, as it is our base image.
-ARG BUILDER_VERSION=43
+ARG BUILDER_VERSION=latest
 # Base image for the final layer
 ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
 
@@ -10,20 +10,16 @@ FROM base AS kernel-query
 RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' | tee /kernel-version.txt
 
 # Using https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html
-FROM registry.fedoraproject.org/fedora:${BUILDER_VERSION} AS builder
+FROM quay.io/fedora/fedora:${BUILDER_VERSION} AS builder
 ARG BUILDER_VERSION
 COPY --from=kernel-query /kernel-version.txt /kernel-version.txt
-WORKDIR /etc/yum.repos.d
-RUN curl -L -O https://src.fedoraproject.org/rpms/fedora-repos/raw/f${BUILDER_VERSION}/f/fedora-updates-archive.repo \
-    && sed -i 's/enabled=AUTO_VALUE/enabled=true/' fedora-updates-archive.repo \
-    && sed -i 's@enabled=1@enabled=0@g' fedora-cisco-openh264.repo
+RUN sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo && \
+    dnf install -y fedora-repos-archive
 RUN dnf install -y jq dkms akmods gcc make autoconf automake libtool rpm-build libtirpc-devel libblkid-devel \
     libuuid-devel libudev-devel openssl-devel zlib-ng-devel libaio-devel libattr-devel elfutils-libelf-devel \
     python3 python3-devel python3-setuptools python3-cffi libffi-devel git ncompress libcurl-devel \
     kernel-$(cat /kernel-version.txt) kernel-modules-$(cat /kernel-version.txt) kernel-devel-$(cat /kernel-version.txt) kernel-rpm-macros \
     systemd-devel libunwind-devel openssl python3-packaging
-
-WORKDIR /
 
 ARG ZFS_VERSION
 # Inspo https://github.com/ublue-os/akmods/blob/main/build_files/zfs/build-kmod-zfs.sh
