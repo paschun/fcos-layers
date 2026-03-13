@@ -123,7 +123,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: "Define image metadata: ${{ inputs.image_name }}"
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           tags: |
@@ -204,7 +204,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: "Define image metadata"
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_FULL_NAME }}
           # creates 3 tags.
