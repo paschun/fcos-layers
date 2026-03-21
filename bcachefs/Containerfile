@@ -39,8 +39,8 @@ set -xeuo pipefail
 echo "keepcache=True" >> /etc/dnf/dnf.conf
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 dnf config-manager addrepo --from-repofile=https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_$(cat /fedora-version.txt)/filesystems:bcachefs:release.repo
-dnf install -y fedora-repos-archive
 #dnf copr enable -y ngompa/bcachefs
+dnf install -y fedora-repos-archive
 EOF
 
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \

@@ -4,6 +4,8 @@ FROM ${BASE_IMAGE}
 COPY policy.json /etc/containers/
 COPY paschun.yaml /etc/containers/registries.d/
 COPY paschun.pub /etc/pki/containers/
+COPY rpm-ostreed.conf /etc/
+COPY check-remote.conf /etc/systemd/system/rpm-ostreed-automatic.service.d/
 
 RUN <<EOF
 set -xeuo pipefail

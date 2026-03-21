@@ -6,6 +6,7 @@ Custom Fedora CoreOS (FCOS) layered images.
   - [`bcachefs`](#bcachefs-image): Includes bcachefs as a kernel module (built on top of `base`)
   - [`zfs`](#zfs-image): Includes ZFS as a kernel module (built on top of `base`)
 - [Install instructions](#install)
+  - [Automatic Updates](#automatic-updates)
 - [Manually verify signature](#manually-verify-signature)
 
 These images are based on the upstream images of FCOS.
@@ -28,6 +29,7 @@ Includes:
 - `python3` and `nodejs` are pulled in as dependencies of the above.
 - Maybe more utils, check the Containerfile
 - Config files necessary to verify the signature on images from this repo
+- Config files for a proper [auto-update](#automatic-updates)
 
 Image:
 
@@ -111,19 +113,19 @@ So after getting the signature config files via a first unverified rebase, you c
 > sudo rpm-ostree rebase --bypass-driver --reboot ostree-image-signed:docker://ghcr.io/paschun/fcos-layers/bcachefs:stable
 ```
 
-### Automatic updates
+### Automatic Updates
 
 If you are coming from vanilla FCOS, it uses [Zincati](https://coreos.github.io/zincati/usage/auto-updates/) by default for updates. Zincati depends on a [Cincinnati](https://github.com/coreos/fedora-coreos-cincinnati) service that runs on Fedora servers. The Zincati client uses it to see if an update is available, and if so, it runs `rpm-ostree upgrade`.
 
-After rebasing, you can't use Zincati anymore. So disable it:
-```sh
-> systemctl disable --now zincati.service
-```
-And instead enable the built-in:
-```sh
-> systemctl enable --now rpm-ostreed-automatic.timer
-```
+After rebasing, you can't use Zincati anymore.  
+So the [`base`](#base-image) image (and derived images) disables `zincati.service` and instead enables `rpm-ostreed-automatic.timer` which triggers `rpm-ostreed-automatic.service`.
+
 You can see what it will do with `systemctl cat rpm-ostreed-automatic.{timer,service}`. It just runs `rpm-ostree upgrade` once a day.
+
+`rpm-ostreed-automatic.service` is further configured by [`/etc/rpm-ostreed.conf`](https://www.mankier.com/5/rpm-ostreed.conf). In the [`base`](#base-image) image, I have set `AutomaticUpdatePolicy=apply` in this conf file, which applies upgrades and reboots when the service is triggered.
+
+However, `rpm-ostreed-automatic` is a dumb service. It runs `rpm-ostree upgrade` every day and reboots, even if there is no base image update available, even if only to update a few rpm packages, which is unnecessary and wipes out useful rollback images.
+So, in the [`base`](#base-image) image I have created a systemd unit drop-in for `rpm-ostreed-automatic.service` that checks first to see if an update is available before running `rpm-ostree upgrade`.
 
 ## Manually verify signature
 
