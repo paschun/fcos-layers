@@ -6,7 +6,7 @@
 # could try quay.io/bootc-devel/fedora-bootc-43-standard
 ARG BUILDER_IMAGE=quay.io/fedora/fedora:latest
 # Base image for the final stage
-ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
+ARG BASE_IMAGE=ghcr.io/paschun/fcos-layers/base:stable
 
 FROM ${BASE_IMAGE} AS base
 
@@ -38,8 +38,8 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -xeuo pipefail
 echo "keepcache=True" >> /etc/dnf/dnf.conf
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
-dnf config-manager addrepo --from-repofile=https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_$(cat /fedora-version.txt)/filesystems:bcachefs:release.repo
-#dnf copr enable -y ngompa/bcachefs
+#dnf config-manager addrepo --from-repofile=https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/Fedora_$(cat /fedora-version.txt)/filesystems:bcachefs:release.repo
+dnf copr enable -y ngompa/bcachefs
 dnf install -y fedora-repos-archive
 EOF
 
@@ -48,8 +48,12 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
 
 # the kernel module will be built here in dkms postinstall step
 # dkms signs module via /lib/modules/6.18.5-200.fc43.aarch64/build/scripts/sign-file , provided by kernel-devel
-RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    dnf install -y dkms-bcachefs bcachefs-tools
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+dnf install -y dkms-bcachefs bcachefs-tools
+# `bcachefs version` throws error so get it from rpm instead
+rpm -q --queryformat '%{VERSION}' bcachefs-tools | tee /bcachefs-version.txt
+EOF
 
 # dkms mktarball bcachefs/1.36.0 -k 6.17.12-300.fc43.aarch64 --binaries-only --archive ./tarball.tar
 # in tarball.tar >
@@ -62,7 +66,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
 # dnf install -y kernel-rpm-macros
 RUN rpmdev-setuptree
 RUN <<EOT cat > ~/rpmbuild/SPECS/bcachefs-kmod.spec
-%define module_version $(bcachefs version)
+%define module_version $(cat /bcachefs-version.txt)
 %define kernel_version $(cat /kernel-version.txt)
 %define rpm_release 1
 
@@ -101,12 +105,23 @@ EOT
 
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -euo pipefail
-cp -pv /var/lib/dkms/bcachefs/$(bcachefs version)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
+cp -pv /var/lib/dkms/bcachefs/$(cat /bcachefs-version.txt)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
 rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
 # Wrote: /root/rpmbuild/RPMS/aarch64/bcachefs-kmod-6.17.12-300.fc43.aarch64-1.36.0-1.fc43.aarch64.rpm
 cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
 # /var/cache/libdnf5/filesystems_bcachefs_release-2a8b1ff6dcb3911b/packages/bcachefs-tools-1.36.0-1.1.aarch64.rpm
-cp -pv /var/cache/libdnf5/filesystems_bcachefs_release-*/packages/bcachefs-tools-*.rpm /root/
+# /var/cache/libdnf5/copr:copr.fedorainfracloud.org:ngompa:bcachefs-bf9ca2ff0c9c0c0b/packages/bcachefs-tools-1.37.2-1.fc43.aarch64.rpm
+find /var/cache/libdnf5/ -name 'bcachefs-tools-*.rpm' -exec cp -pv {} /root/ \;
+EOF
+
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+dnf install -y rpmrebuild
+# copr bcachefs-tools has:
+# Requires:      (dkms-bcachefs = 1.37.2-1.fc43 if kernel-core(aarch-64))
+# remove it.
+rpmrebuild --batch --verbose --warning --change-spec-requires='sed "/^Requires:.*dkms-bcachefs/d"' --package bcachefs-tools-*.rpm
+find /root/rpmbuild/ -name '*.rpm' -exec cp -pvf {} /root/ \;
 EOF
 
 FROM base
