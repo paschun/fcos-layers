@@ -35,11 +35,12 @@ jobs:
             || \
             curl -sSv -4 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | tee >(head -c 500 >&2) | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
           COPR_BCACHEFS_VERSION=$(curl -sS "https://copr.fedorainfracloud.org/api_3/package/list?ownername=ngompa&projectname=bcachefs&with_latest_build=true" | jq -r '.items[0].builds.latest.source_package.version')
+          BCACHEFS_VERSION="$COPR_BCACHEFS_VERSION"
 
           echo "FCOS_VERSION=$FCOS_VERSION" | tee -a "$GITHUB_OUTPUT"
           echo "BUILDER_VERSION=$BUILDER_VERSION" | tee -a "$GITHUB_OUTPUT"
           echo "ZFS_VERSION=$ZFS_VERSION" | tee -a "$GITHUB_OUTPUT"
-          echo "BCACHEFS_VERSION=$COPR_BCACHEFS_VERSION" | tee -a "$GITHUB_OUTPUT"
+          echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a "$GITHUB_OUTPUT"
 
           ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
           AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
