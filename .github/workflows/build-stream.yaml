@@ -28,7 +28,10 @@ jobs:
 
           FCOS_VERSION=$(curl -sS "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
-          ZFS_VERSION=$(curl -sS "https://api.github.com/repos/openzfs/zfs/releases" | jq -r --arg ZMV "zfs-" '[ .[] | select(.prerelease==false and .draft==false) | select(.tag_name | startswith($ZMV))][0].tag_name' | cut -f2- -d-)
+          ZFS_VERSION=$(curl -sSv "https://api.github.com/repos/openzfs/zfs/releases" | \
+            tee >(head -c 500 >&2) | \
+            jq -r --arg ZMV "zfs-" "first(.[] | select(.prerelease==false and .draft==false and (.tag_name|startswith($ZMV)))).tag_name" | \
+            cut -f2- -d-)
           curl -4sS https://myip.addr.tools
           SUSE_BCACHEFS_VERSION=$(
             curl -sSv -4 -m 15 https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/openSUSE_Tumbleweed/src/ | tee >(head -c 500 >&2) | grep -oP '(?<=bcachefs-tools-)[\d\.]{5,20}' | head -n 1 \
