@@ -31,13 +31,15 @@ jobs:
           ZFS_VERSION=$(curl -sSv "https://api.github.com/repos/openzfs/zfs/releases" | \
             tee >(head -c 500 >&2) | \
             jq -r --arg ZMV "zfs-" 'first(.[] | select(.prerelease==false and .draft==false and (.tag_name|startswith($ZMV)))).tag_name' | \
-            cut -f2- -d-)
+            cut -f '2-' -d '-')
           curl -4sS https://myip.addr.tools
           SUSE_BCACHEFS_VERSION=$(
             curl -sSv -4 -m 15 https://download.opensuse.org/repositories/filesystems:/bcachefs:/release/openSUSE_Tumbleweed/src/ | tee >(head -c 500 >&2) | grep -oP '(?<=bcachefs-tools-)[\d\.]{5,20}' | head -n 1 \
             || \
             curl -sSv -4 -m 15 https://build.opensuse.org/package/show/filesystems:bcachefs:release/bcachefs | tee >(head -c 500 >&2) | grep -oP '(?<=bcachefs-tools_)[\d\.]{5,20}(?=\.dsc)' | head -n 1)
-          COPR_BCACHEFS_VERSION=$(curl -sS "https://copr.fedorainfracloud.org/api_3/package/list?ownername=ngompa&projectname=bcachefs&with_latest_build=true&with_latest_succeeded_build=true" | jq -r '.items[0].builds.latest_succeeded.source_package.version')
+          # project_dirname is the branch name. If there is a PR opened, a build will run in the branch. https://src.fedoraproject.org/rpms/bcachefs-tools/pull-requests
+          # Only select for main branch builds
+          COPR_BCACHEFS_VERSION=$(curl -sS 'https://copr.fedorainfracloud.org/api_3/build/list?ownername=ngompa&projectname=bcachefs&packagename=bcachefs-tools&status=succeeded' | jq -r 'first(.items[] | select(.project_dirname=="bcachefs")).source_package.version')
           BCACHEFS_VERSION="$COPR_BCACHEFS_VERSION"
 
           echo "FCOS_VERSION=$FCOS_VERSION" | tee -a "$GITHUB_OUTPUT"
