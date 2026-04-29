@@ -15,7 +15,7 @@ FROM base AS version-query
 RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' | tee /kernel-version.txt
 # arch == aarch64 || x86_64
 RUN rpm -qa kernel --queryformat '%{ARCH}' | tee /arch.txt
-RUN . /etc/os-release && echo "$VERSION_ID" | tee /fedora-version.txt
+#RUN . /etc/os-release && echo "$VERSION_ID" | tee /fedora-version.txt
 # can't yet cache packages in /var/cache/rpm-ostree : https://github.com/coreos/rpm-ostree/issues/5453
 #RUN rpm-ostree install bcachefs-tools
 # cant install old versions of bcachefs-tools from COPR. builds of old versions are only kept for 2 weeks.
@@ -28,7 +28,7 @@ FROM ${BUILDER_IMAGE} AS builder
 COPY --from=version-query /kernel-version.txt /kernel-version.txt
 #COPY --from=version-query /bcachefs-tools-version.txt /bcachefs-tools-version.txt
 COPY --from=version-query /arch.txt /arch.txt
-COPY --from=version-query /fedora-version.txt /fedora-version.txt
+#COPY --from=version-query /fedora-version.txt /fedora-version.txt
 
 # avoids the hundreds of xattr and cp errors with dracut when running dnf install
 ENV DRACUT_NO_XATTR=1
@@ -45,6 +45,12 @@ EOF
 
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     dnf install -y kernel-$(cat /kernel-version.txt)  kernel-devel-$(cat /kernel-version.txt) openssl
+# if the kernel is not in updates-archive yet, can get it from koji. example:
+# dnf install -y koji
+# koji download-build --arch aarch64 kernel-6.19.13-300.fc44
+# dnf install ./kernel-6.19.13-300.fc44.aarch64.rpm ./kernel-core-6.19.13-300.fc44.aarch64.rpm ./kernel-modules-6.19.13-300.fc44.aarch64.rpm ./kernel-modules-core-6.19.13-300.fc44.aarch64.rpm ./kernel-devel-matched-6.19.13-300.fc44.aarch64.rpm ./kernel-devel-6.19.13-300.fc44.aarch64.rpm
+# https://koji.fedoraproject.org/koji/buildinfo?buildID=2983244
+
 
 # the kernel module will be built here in dkms postinstall step
 # dkms signs module via /lib/modules/6.18.5-200.fc43.aarch64/build/scripts/sign-file , provided by kernel-devel

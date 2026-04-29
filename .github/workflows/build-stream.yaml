@@ -26,6 +26,8 @@ jobs:
         run: |
           set -xeuo pipefail
 
+          # gh api occassionally responds: http 403 - {"message":"API rate limit exceeded for 172.214.99.9. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)","documentation_url":"https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting"}
+
           FCOS_VERSION=$(curl -sS "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
           ZFS_VERSION=$(curl -sSv "https://api.github.com/repos/openzfs/zfs/releases" | \
