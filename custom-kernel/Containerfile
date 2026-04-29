@@ -1,0 +1,150 @@
+ARG BUILDER_IMAGE=quay.io/fedora/fedora:latest
+# Base image for the final stage
+ARG BASE_IMAGE=ghcr.io/paschun/fcos-layers/base:stable
+
+FROM ${BUILDER_IMAGE} AS builder
+
+ENV DRACUT_NO_XATTR=1
+
+WORKDIR /root
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+echo "keepcache=True" >> /etc/dnf/dnf.conf
+
+rpm --eval '%{_arch}' | tee /arch.txt
+export ARCH=$(cat /arch.txt)
+
+dnf install -y fedora-packager perl opencsd-devel stubble python3-wheel
+#dnf install -y vim ripgrep fd-find gdu tree
+dnf builddep -y kernel
+EOF
+
+RUN <<EOF
+set -xeuo pipefail
+git clone --depth 25 https://gitlab.com/cki-project/kernel-ark.git -v
+EOF
+
+WORKDIR /root/kernel-ark/
+RUN <<EOF
+set -xeuo pipefail
+git remote set-branches --add origin ark-latest master
+git fetch --depth 25
+git switch ark-latest
+EOF
+
+WORKDIR /root/kernel-ark/redhat/
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+# user.email,name needed to build
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
+
+make dist-rpm-baseonly RPMBUILDOPTS="--target aarch64 --without debug --without debuginfo --without bpftool --without perf --without libperf --without tools --without selftests -bb"
+EOF
+
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+# `make -s dist-dump-variables` to view build vars
+export ARCH=$(cat /arch.txt)
+export BASEVERSION=$(make -s dist-dump-variables | awk -F = '/^BASEVERSION/{print $2}') # 7.1.0-0.rc1.9.test
+export DIST=$(make -s dist-dump-variables | grep '^DIST=' | cut -d = -f 2) # .fc43
+# rpm -qp --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}' kernel-7.1.0-0.rc1.9.test.fc43.aarch64.rpm
+# VERSION=7.1.0 , RELEASE=0.rc1.9.test.fc43
+export VER_REL="$BASEVERSION$DIST.$ARCH"
+echo "$VER_REL" | tee /kernel-version.txt
+
+dnf install -y ./rpm/RPMS/"$ARCH"/kernel{,-core,-modules{,-core},-devel{,-matched}}-"$VER_REL".rpm
+
+dnf copr enable -y ngompa/bcachefs
+dnf install -y dkms-bcachefs bcachefs-tools
+rpm -q --queryformat '%{VERSION}' bcachefs-tools | tee /bcachefs-version.txt
+
+rpmdev-setuptree -d
+EOF
+
+WORKDIR /root
+RUN <<EOT cat > ~/rpmbuild/SPECS/bcachefs-kmod.spec
+%define module_version $(cat /bcachefs-version.txt)
+%define kernel_version $(cat /kernel-version.txt)
+%define rpm_release 1
+
+Name:           bcachefs-kmod-%{kernel_version}
+# dashes not allowed in version
+Version:        %{module_version}
+# ?dist puts .fc43
+Release:        %{rpm_release}%{?dist}
+Summary:        bcachefs kernel module
+
+License:        GPL-2.0-only
+Source0:        %{_sourcedir}/bcachefs.ko.xz
+
+BuildArch:      $(cat /arch.txt)
+Requires:       kernel-uname-r = %{kernel_version}
+
+# mandatory
+%description
+bcachefs v%{module_version} kernel module for kernel %{kernel_version}
+
+%install
+install -d %{buildroot}/usr/lib/modules/%{kernel_version}/extra/
+install -m 0755 %{SOURCE0} %{buildroot}/usr/lib/modules/%{kernel_version}/extra/bcachefs.ko.xz
+
+install -d %{buildroot}/etc/modules-load.d/
+echo "bcachefs" > %{buildroot}/etc/modules-load.d/bcachefs.conf
+
+%post
+depmod -a %{kernel_version}
+
+%files
+%defattr(644,root,root,755)
+/usr/lib/modules/%{kernel_version}/extra/bcachefs.ko.xz
+/etc/modules-load.d/bcachefs.conf
+EOT
+
+# /usr/lib/dkms/common.postinst bcachefs 1.38.0
+# dkms build -m bcachefs -v 1.38.0 -k 7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64
+# /usr/src/kernels/7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64/include/linux/nodemask.h:92
+
+# /var/lib/dkms/bcachefs/1.38.0/source/src/fs/bcachefs
+# /usr/src/kernels/7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64/
+
+# Apr 2 changes to RAID xor API break bcachefs builds: https://lore.kernel.org/linux-raid/20260327061704.3707577-1-hch@lst.de/T/
+# https://github.com/torvalds/linux/commits/master/include/linux/raid/xor.h
+
+#RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+#set -euo pipefail
+#ls -lRh /var/lib/dkms/
+#cat /var/lib/dkms/bcachefs/1.38.0/build/dkms.conf
+#cat /var/lib/dkms/bcachefs/1.38.0/build/make.log
+#ls -lah /usr/src/kernels/7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64/
+#cp -pv /var/lib/dkms/bcachefs/$(cat /bcachefs-version.txt)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
+#rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
+#cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
+#find /var/cache/libdnf5/ -name 'bcachefs-tools-*.rpm' -exec cp -pv {} /root/ \;
+#
+#set -x
+#dnf install -y rpmrebuild
+## copr bcachefs-tools has:
+## Requires:      (dkms-bcachefs = 1.37.2-1.fc43 if kernel-core(aarch-64))
+## remove it.
+## If Kernel is not installed, then dkms-bcachefs isn't brought in as dependency by dnf install, but it is still in "Requires" pragma in bcachefs-tools rpm?
+#rpmrebuild --batch --verbose --warning --change-spec-requires='sed "/^Requires:.*dkms-bcachefs/d"' --package bcachefs-tools-*.rpm
+#find /root/rpmbuild/ -name '*.rpm' -exec cp -pvf {} /root/ \;
+#
+#export ARCH=$(cat /arch.txt)
+#cp -pv ~/kernel-ark/redhat/rpm/RPMS/"$ARCH"/kernel{,-core,-modules{,-core}}-"$VER_REL".rpm ~/
+#EOF
+#
+#
+#FROM ${BASE_IMAGE} AS base
+#COPY --from=builder /root/*.rpm /tmp/
+#COPY ./rpms/* /tmp/
+#
+#RUN <<EOF
+#set -xeuo pipefail
+#ls -lh /tmp/
+##rpm-ostree override replace --install /tmp/bcachefs-kmod*.rpm --install /tmp/bcachefs-tools*.rpm /tmp/kernel*.rpm 
+#rpm-ostree override replace /tmp/kernel*.rpm 
+#rpm-ostree install /tmp/bcachefs*.rpm
+#rm -v /tmp/*.rpm
+#ostree container commit
+#EOF
