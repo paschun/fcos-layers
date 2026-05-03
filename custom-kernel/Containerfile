@@ -1,4 +1,4 @@
-ARG BUILDER_IMAGE=quay.io/fedora/fedora:latest
+ARG BUILDER_IMAGE=quay.io/fedora/fedora:43
 # Base image for the final stage
 ARG BASE_IMAGE=ghcr.io/paschun/fcos-layers/base:stable
 
@@ -12,44 +12,84 @@ set -xeuo pipefail
 echo "keepcache=True" >> /etc/dnf/dnf.conf
 
 rpm --eval '%{_arch}' | tee /arch.txt
-export ARCH=$(cat /arch.txt)
 
 dnf install -y fedora-packager perl opencsd-devel stubble python3-wheel
-#dnf install -y vim ripgrep fd-find gdu tree
+#dnf install -y neovim ripgrep fd-find gdu tree
 dnf builddep -y kernel
 EOF
 
+# full clone takes 10m
+# shallow takes ~1m
 RUN <<EOF
 set -xeuo pipefail
-git clone --depth 25 https://gitlab.com/cki-project/kernel-ark.git -v
+# default branch is "os-build"
+time git clone -o kernel-ark https://gitlab.com/cki-project/kernel-ark.git -v
 EOF
+#time git clone --depth 1 https://gitlab.com/cki-project/kernel-ark.git -v
 
 WORKDIR /root/kernel-ark/
 RUN <<EOF
 set -xeuo pipefail
-git remote set-branches --add origin ark-latest master
-git fetch --depth 25
-git switch ark-latest
-EOF
+git remote set-branches --add kernel-ark ark-latest master fedora-7.0 linux-7.0.y
+time git fetch
+#git switch ark-latest
+git branch --track fedora-7.0 kernel-ark/fedora-7.0
+git branch --track linux-7.0.y kernel-ark/linux-7.0.y
 
-WORKDIR /root/kernel-ark/redhat/
-RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
-set -xeuo pipefail
-# user.email,name needed to build
+## user.email,name needed to build
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
+EOF
+#time git fetch --shallow-since 2026-02-01
+# gitlab server bugs out / is slow with --shallow-exclude
+#time git fetch --shallow-exclude v6.19.14 -vv
+#time git fetch --deepen 1 -vv
 
-make dist-rpm-baseonly RPMBUILDOPTS="--target aarch64 --without debug --without debuginfo --without bpftool --without perf --without libperf --without tools --without selftests -bb"
+RUN <<EOF
+set -xeuo pipefail
+git remote add libata https://git.kernel.org/pub/scm/linux/kernel/git/libata/linux.git
+time git fetch --all
+EOF
+#git fetch --shallow-since 2026-02-01 libata for-next
+#time git fetch libata for-next
+
+RUN <<EOF
+set -xeuo pipefail
+git checkout -b fedora-7.0-libata kernel-ark/fedora-7.0
+git merge libata/for-7.1
+git cherry-pick --empty=drop v7.1-rc1..libata/for-7.1-fixes
+git cherry-pick --empty=drop v7.1-rc1..libata/for-next
 EOF
 
+# git cherry-pick $(git rev-list --reverse --no-merges --cherry-pick --right-only HEAD...libata/for-6.20)
+# git cherry-pick -X ours --empty=drop v7.0-rc1..libata/for-7.1
+# git diff v7.0-rc1 libata/for-7.1 | git apply --3way
+
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+dnf install -y b4
+b4 shazam 20260501125410.1204490-5-cassel@kernel.org
+EOF
+
+# FBS support (5918bf2) is in libata/for-7.1-fixes, libata/for-7.2, libata/for-next
+
+WORKDIR /root/kernel-ark/redhat/
+RUN <<EOF
+set -xeuo pipefail
+make dist-rpm-baseonly RPMBUILDOPTS="--target aarch64 --without debug --without debuginfo --without bpftool --without perf --without libperf --without tools --without selftests -bb"
+EOF
+# changes since `redhat/marker` are made into patch file at: /root/kernel-ark/redhat/rpm/SOURCES/patch-6.19-redhat.patch
+
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
 # `make -s dist-dump-variables` to view build vars
-export ARCH=$(cat /arch.txt)
-export BASEVERSION=$(make -s dist-dump-variables | awk -F = '/^BASEVERSION/{print $2}') # 7.1.0-0.rc1.9.test
-export DIST=$(make -s dist-dump-variables | grep '^DIST=' | cut -d = -f 2) # .fc43
+# https://cki-project.gitlab.io/kernel-ark/kernel-naming.html
+ARCH=$(cat /arch.txt)
+BASEVERSION=$(make -s dist-dump-variables | awk -F = '/^BASEVERSION/{print $2}') # 7.1.0-0.rc1.9.test
+DIST=$(make -s dist-dump-variables | grep '^DIST=' | cut -d = -f 2) # .fc43
 # rpm -qp --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}' kernel-7.1.0-0.rc1.9.test.fc43.aarch64.rpm
 # VERSION=7.1.0 , RELEASE=0.rc1.9.test.fc43
-export VER_REL="$BASEVERSION$DIST.$ARCH"
+VER_REL="$BASEVERSION$DIST.$ARCH"
 echo "$VER_REL" | tee /kernel-version.txt
 
 dnf install -y ./rpm/RPMS/"$ARCH"/kernel{,-core,-modules{,-core},-devel{,-matched}}-"$VER_REL".rpm
@@ -100,51 +140,42 @@ depmod -a %{kernel_version}
 /etc/modules-load.d/bcachefs.conf
 EOT
 
-# /usr/lib/dkms/common.postinst bcachefs 1.38.0
-# dkms build -m bcachefs -v 1.38.0 -k 7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64
-# /usr/src/kernels/7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64/include/linux/nodemask.h:92
+# dkms postinst:
+# -- /usr/lib/dkms/common.postinst bcachefs 1.38.0
+#---- dkms build -m bcachefs -v 1.38.0 -k 7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64
 
-# /var/lib/dkms/bcachefs/1.38.0/source/src/fs/bcachefs
-# /usr/src/kernels/7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64/
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -euo pipefail
+cp -pv /var/lib/dkms/bcachefs/$(cat /bcachefs-version.txt)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
+rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
+cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
+find /var/cache/libdnf5/ -name 'bcachefs-tools-*.rpm' -exec cp -pv {} /root/ \;
 
-# Apr 2 changes to RAID xor API break bcachefs builds: https://lore.kernel.org/linux-raid/20260327061704.3707577-1-hch@lst.de/T/
-# https://github.com/torvalds/linux/commits/master/include/linux/raid/xor.h
+set -x
+dnf install -y rpmrebuild
+# copr bcachefs-tools has:
+# Requires:      (dkms-bcachefs = 1.37.2-1.fc43 if kernel-core(aarch-64))
+# remove it.
+# If Kernel is not installed, then dkms-bcachefs isn't brought in as dependency by dnf install, but it is still in "Requires" pragma in bcachefs-tools rpm?
+rpmrebuild --batch --verbose --warning --change-spec-requires='sed "/^Requires:.*dkms-bcachefs/d"' --package bcachefs-tools-*.rpm
+find /root/rpmbuild/ -name '*.rpm' -exec cp -pvf {} /root/ \;
 
-#RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
-#set -euo pipefail
-#ls -lRh /var/lib/dkms/
-#cat /var/lib/dkms/bcachefs/1.38.0/build/dkms.conf
-#cat /var/lib/dkms/bcachefs/1.38.0/build/make.log
-#ls -lah /usr/src/kernels/7.1.0-0.rc1.3b3bea6d4b.10.test.fc43.aarch64/
-#cp -pv /var/lib/dkms/bcachefs/$(cat /bcachefs-version.txt)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
-#rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
-#cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
-#find /var/cache/libdnf5/ -name 'bcachefs-tools-*.rpm' -exec cp -pv {} /root/ \;
-#
-#set -x
-#dnf install -y rpmrebuild
-## copr bcachefs-tools has:
-## Requires:      (dkms-bcachefs = 1.37.2-1.fc43 if kernel-core(aarch-64))
-## remove it.
-## If Kernel is not installed, then dkms-bcachefs isn't brought in as dependency by dnf install, but it is still in "Requires" pragma in bcachefs-tools rpm?
-#rpmrebuild --batch --verbose --warning --change-spec-requires='sed "/^Requires:.*dkms-bcachefs/d"' --package bcachefs-tools-*.rpm
-#find /root/rpmbuild/ -name '*.rpm' -exec cp -pvf {} /root/ \;
-#
-#export ARCH=$(cat /arch.txt)
-#cp -pv ~/kernel-ark/redhat/rpm/RPMS/"$ARCH"/kernel{,-core,-modules{,-core}}-"$VER_REL".rpm ~/
-#EOF
-#
-#
-#FROM ${BASE_IMAGE} AS base
-#COPY --from=builder /root/*.rpm /tmp/
-#COPY ./rpms/* /tmp/
-#
-#RUN <<EOF
-#set -xeuo pipefail
-#ls -lh /tmp/
-##rpm-ostree override replace --install /tmp/bcachefs-kmod*.rpm --install /tmp/bcachefs-tools*.rpm /tmp/kernel*.rpm 
-#rpm-ostree override replace /tmp/kernel*.rpm 
-#rpm-ostree install /tmp/bcachefs*.rpm
-#rm -v /tmp/*.rpm
-#ostree container commit
-#EOF
+ARCH=$(cat /arch.txt)
+VER_REL=$(cat /kernel-version.txt)
+cp -pv ~/kernel-ark/redhat/rpm/RPMS/"$ARCH"/kernel{,-core,-modules{,-core}}-"$VER_REL".rpm ~/
+EOF
+
+
+FROM ${BASE_IMAGE} AS base
+
+COPY --from=builder /root/*.rpm /tmp/
+
+RUN <<EOF
+set -xeuo pipefail
+ls -lh /tmp/
+#rpm-ostree override replace --install /tmp/bcachefs-kmod*.rpm --install /tmp/bcachefs-tools*.rpm /tmp/kernel*.rpm 
+rpm-ostree override replace /tmp/kernel*.rpm 
+rpm-ostree install /tmp/bcachefs*.rpm
+rm -v /tmp/*.rpm
+ostree container commit
+EOF
