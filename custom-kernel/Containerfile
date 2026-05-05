@@ -59,7 +59,9 @@ git checkout -b fedora-7.0-libata kernel-ark/fedora-7.0
 git merge libata/for-7.1
 git cherry-pick --empty=drop v7.1-rc1..libata/for-7.1-fixes
 git cherry-pick --empty=drop v7.1-rc1..libata/for-next
+git cherry-pick 5918bf2a17f4689abfb94d341c5240088f8bd16e
 EOF
+# FBS support (5918bf2)
 
 # git cherry-pick $(git rev-list --reverse --no-merges --cherry-pick --right-only HEAD...libata/for-6.20)
 # git cherry-pick -X ours --empty=drop v7.0-rc1..libata/for-7.1
@@ -69,9 +71,8 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -xeuo pipefail
 dnf install -y b4
 b4 shazam 20260501125410.1204490-5-cassel@kernel.org
+git log --oneline --decorate -15
 EOF
-
-# FBS support (5918bf2) is in libata/for-7.1-fixes, libata/for-7.2, libata/for-next
 
 WORKDIR /root/kernel-ark/redhat/
 RUN <<EOF
