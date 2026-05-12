@@ -43,16 +43,27 @@ dnf copr enable -y ngompa/bcachefs
 dnf install -y fedora-repos-archive
 EOF
 
+WORKDIR /root
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -xeuo pipefail
 dnf list --showduplicates kernel
-dnf install -y kernel-$(cat /kernel-version.txt)  kernel-devel-$(cat /kernel-version.txt) openssl
+if dnf repoquery --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel | grep -q "$(cat /kernel-version.txt)"; then
+    # install from updates-archive
+    dnf install -y kernel-$(cat /kernel-version.txt)  kernel-devel-$(cat /kernel-version.txt) openssl
+else
+    # if the kernel is not in updates-archive yet, get it from koji.
+    mkdir koji
+    cd koji
+    dnf install -y koji
+    VRA="$(cat /kernel-version.txt)"
+    VR="${VRA%.*}" # % strips the shortest match of the pattern from the end
+    koji download-build --arch "$(cat /arch.txt)" "kernel-$VR"
+    dnf install -y ./kernel{,-core,-modules{,-core},-devel{,-matched}}-"$VRA".rpm
+    cd ..
+    rm -rv koji
+fi
 EOF
-# if the kernel is not in updates-archive yet, can get it from koji. example:
-# dnf install -y koji
-# koji download-build --arch aarch64 kernel-6.19.13-300.fc44
-# dnf install ./kernel-6.19.13-300.fc44.aarch64.rpm ./kernel-core-6.19.13-300.fc44.aarch64.rpm ./kernel-modules-6.19.13-300.fc44.aarch64.rpm ./kernel-modules-core-6.19.13-300.fc44.aarch64.rpm ./kernel-devel-matched-6.19.13-300.fc44.aarch64.rpm ./kernel-devel-6.19.13-300.fc44.aarch64.rpm
-# https://koji.fedoraproject.org/koji/buildinfo?buildID=2983244
+# ex: https://koji.fedoraproject.org/koji/buildinfo?buildID=2992812
 
 
 # the kernel module will be built here in dkms postinstall step
@@ -69,7 +80,6 @@ EOF
 # rw-r--r-- root/root      1709 2026-01-14 07:37 ./dkms_main_tree/6.17.11-300.fc43.aarch64/aarch64/module/Module.symvers
 # -rw-r--r-- root/root    799668 2026-01-14 07:37 ./dkms_main_tree/6.17.11-300.fc43.aarch64/aarch64/module/bcachefs.ko.xz
 
-WORKDIR /root
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     dnf install -y rpmdevtools
 # dnf install -y kernel-rpm-macros
