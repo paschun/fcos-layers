@@ -70,7 +70,7 @@ EOF
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -xeuo pipefail
 dnf install -y b4
-b4 shazam 20260501125410.1204490-5-cassel@kernel.org
+b4 shazam 20260508195051.188207-4-cassel@kernel.org
 git log --oneline --decorate -15
 EOF
 
@@ -150,7 +150,7 @@ set -euo pipefail
 cp -pv /var/lib/dkms/bcachefs/$(cat /bcachefs-version.txt)/$(cat /kernel-version.txt)/$(cat /arch.txt)/module/bcachefs.ko.xz ~/rpmbuild/SOURCES/
 rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
 cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
-find /var/cache/libdnf5/ -name 'bcachefs-tools-*.rpm' -exec cp -pv {} /root/ \;
+find /var/cache/libdnf5/ -name "bcachefs-tools-$(cat /bcachefs-version.txt)*.rpm" -exec cp -pv {} /root/ \;
 
 set -x
 dnf install -y rpmrebuild

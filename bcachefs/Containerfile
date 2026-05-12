@@ -117,7 +117,7 @@ rpmbuild -bb ~/rpmbuild/SPECS/bcachefs-kmod.spec
 cp -pv /root/rpmbuild/RPMS/$(cat /arch.txt)/*.rpm /root/
 # /var/cache/libdnf5/filesystems_bcachefs_release-2a8b1ff6dcb3911b/packages/bcachefs-tools-1.36.0-1.1.aarch64.rpm
 # /var/cache/libdnf5/copr:copr.fedorainfracloud.org:ngompa:bcachefs-bf9ca2ff0c9c0c0b/packages/bcachefs-tools-1.37.2-1.fc43.aarch64.rpm
-find /var/cache/libdnf5/ -name 'bcachefs-tools-*.rpm' -exec cp -pv {} /root/ \;
+find /var/cache/libdnf5/ -name "bcachefs-tools-$(cat /bcachefs-version.txt)*.rpm" -exec cp -pv {} /root/ \;
 EOF
 
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
