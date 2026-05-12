@@ -20,12 +20,9 @@ on:
 jobs:
   pull-build-vars:
     runs-on: ubuntu-latest
-    secrets: inherit
     steps:
       - name: Get versions to build
         id: get-vers
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -xeuo pipefail
 
@@ -33,8 +30,7 @@ jobs:
 
           FCOS_VERSION=$(curl -sS "https://builds.coreos.fedoraproject.org/streams/${{ inputs.stream }}.json" | jq -r '.architectures.x86_64.artifacts.metal.release')
           BUILDER_VERSION=$(echo "$FCOS_VERSION" | cut -d '.' -f 1)
-          --header "X-GitHub-Api-Version:2026-03-10"
-          ZFS_VERSION=$(curl -sSv --fail-with-body -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' 'https://api.github.com/repos/openzfs/zfs/releases' | \
+          ZFS_VERSION=$(curl -sSv --fail-with-body -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' 'https://api.github.com/repos/openzfs/zfs/releases' | \
             tee >(head -c 500 >&2) | \
             jq -r --arg ZMV "zfs-" 'first(.[] | select(.prerelease==false and .draft==false and (.tag_name|startswith($ZMV)))).tag_name' | \
             cut -f '2-' -d '-')
