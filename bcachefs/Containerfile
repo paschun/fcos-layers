@@ -57,7 +57,7 @@ else
     dnf install -y koji
     VRA="$(cat /kernel-version.txt)"
     VR="${VRA%.*}" # % strips the shortest match of the pattern from the end
-    koji download-build --arch "$(cat /arch.txt)" "kernel-$VR"
+    koji download-build --noprogress --arch "$(cat /arch.txt)" "kernel-$VR"
     dnf install -y ./kernel{,-core,-modules{,-core},-devel{,-matched}}-"$VRA".rpm
     cd ..
     rm -rv koji
