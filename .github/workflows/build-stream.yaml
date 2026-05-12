@@ -20,6 +20,7 @@ on:
 jobs:
   pull-build-vars:
     runs-on: ubuntu-latest
+    secrets: inherit
     steps:
       - name: Get versions to build
         id: get-vers
