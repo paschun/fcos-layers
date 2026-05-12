@@ -43,8 +43,11 @@ dnf copr enable -y ngompa/bcachefs
 dnf install -y fedora-repos-archive
 EOF
 
-RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    dnf install -y kernel-$(cat /kernel-version.txt)  kernel-devel-$(cat /kernel-version.txt) openssl
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
+set -xeuo pipefail
+dnf list --showduplicates kernel
+dnf install -y kernel-$(cat /kernel-version.txt)  kernel-devel-$(cat /kernel-version.txt) openssl
+EOF
 # if the kernel is not in updates-archive yet, can get it from koji. example:
 # dnf install -y koji
 # koji download-build --arch aarch64 kernel-6.19.13-300.fc44
