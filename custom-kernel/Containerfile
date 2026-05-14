@@ -1,4 +1,4 @@
-ARG BUILDER_IMAGE=quay.io/fedora/fedora:43
+ARG BUILDER_IMAGE=quay.io/fedora/fedora:latest
 # Base image for the final stage
 ARG BASE_IMAGE=ghcr.io/paschun/fcos-layers/base:stable
 
@@ -27,14 +27,16 @@ time git clone -o kernel-ark https://gitlab.com/cki-project/kernel-ark.git -v
 EOF
 #time git clone --depth 1 https://gitlab.com/cki-project/kernel-ark.git -v
 
+# ark-latest is latest "known-good" branch
 WORKDIR /root/kernel-ark/
 RUN <<EOF
 set -xeuo pipefail
 git remote set-branches --add kernel-ark ark-latest master fedora-7.0 linux-7.0.y
 time git fetch
-#git switch ark-latest
-git branch --track fedora-7.0 kernel-ark/fedora-7.0
-git branch --track linux-7.0.y kernel-ark/linux-7.0.y
+
+git branch --track master kernel-ark/master
+#git branch --track fedora-7.0 kernel-ark/fedora-7.0
+#git branch --track linux-7.0.y kernel-ark/linux-7.0.y
 
 ## user.email,name needed to build
 git config --global user.email "you@example.com"
@@ -55,13 +57,12 @@ EOF
 
 RUN <<EOF
 set -xeuo pipefail
-git checkout -b fedora-7.0-libata kernel-ark/fedora-7.0
-git merge libata/for-7.1
-git cherry-pick --empty=drop v7.1-rc1..libata/for-7.1-fixes
+git checkout -b ark-latest-libata kernel-ark/ark-latest
+#git merge libata/for-7.1
+#git cherry-pick --empty=drop v7.1-rc1..libata/for-7.1-fixes
 git cherry-pick --empty=drop v7.1-rc1..libata/for-next
-git cherry-pick 5918bf2a17f4689abfb94d341c5240088f8bd16e
+#git cherry-pick 5918bf2a17f4689abfb94d341c5240088f8bd16e # FBS support
 EOF
-# FBS support (5918bf2)
 
 # git cherry-pick $(git rev-list --reverse --no-merges --cherry-pick --right-only HEAD...libata/for-6.20)
 # git cherry-pick -X ours --empty=drop v7.0-rc1..libata/for-7.1
@@ -70,13 +71,13 @@ EOF
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -xeuo pipefail
 dnf install -y b4
-b4 shazam 20260508195051.188207-4-cassel@kernel.org
+b4 shazam 20260513151359.1075403-6-cassel@kernel.org
 git log --oneline --decorate -15
 EOF
 
 WORKDIR /root/kernel-ark/redhat/
 RUN <<EOF
-set -xeuo pipefail
+set -euo pipefail
 make dist-rpm-baseonly RPMBUILDOPTS="--target aarch64 --without debug --without debuginfo --without bpftool --without perf --without libperf --without tools --without selftests -bb"
 EOF
 # changes since `redhat/marker` are made into patch file at: /root/kernel-ark/redhat/rpm/SOURCES/patch-6.19-redhat.patch

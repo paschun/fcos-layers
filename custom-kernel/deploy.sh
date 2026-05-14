@@ -2,8 +2,8 @@
 
 set -xeuo pipefail
 
-podman build --pull=newer -t localhost/custom-kernel .
-time podman save --format oci-archive -o custom-kernel.tar localhost/custom-kernel
+podman build --pull=newer -t localhost/custom-kernel:latest .
+time podman save --format oci-archive -o custom-kernel.tar localhost/custom-kernel:latest
 rsync -vhicP ./custom-kernel.tar "$HOST":/var/tmp/
 rm -v ./custom-kernel.tar
 ssh "$HOST" 'sudo ostree admin pin 0'
