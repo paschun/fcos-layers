@@ -71,7 +71,7 @@ EOF
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked <<EOF
 set -xeuo pipefail
 dnf install -y b4
-b4 shazam 20260513151359.1075403-6-cassel@kernel.org
+b4 shazam 20260514073858.1175072-6-cassel@kernel.org
 git log --oneline --decorate -15
 EOF
 
