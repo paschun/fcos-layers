@@ -50,12 +50,15 @@ jobs:
           echo "ZFS_VERSION=$ZFS_VERSION" | tee -a "$GITHUB_OUTPUT"
           echo "BCACHEFS_VERSION=$BCACHEFS_VERSION" | tee -a "$GITHUB_OUTPUT"
 
-          ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
-          AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
+          # token needs to be encoded for GHCR API
+          # secrets.GITHUB_TOKEN format is `^ghs_[a-zA-Z0-9]{36}$`
+          # new format for 'installation tokens' is JWT `ghs_<app_id>_<header>.<payload>.<signature>`
+          ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64 --wrap 0)
+          GHCR_AUTH_HEADER="Authorization: Bearer $ENCODED_TOKEN"
           # can also add &last=$VER . If returned .tags == null , then tag doesnt exist.
-          BASE_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/base/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION\")")
-          ZFS_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/zfs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$ZFS_VERSION\")")
-          BCACHEFS_TAG_EXISTS=$(curl -sS -H "$AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/bcachefs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$BCACHEFS_VERSION\")")
+          BASE_TAG_EXISTS=$(curl -sS -H "$GHCR_AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/base/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION\")")
+          ZFS_TAG_EXISTS=$(curl -sS -H "$GHCR_AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/zfs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$ZFS_VERSION\")")
+          BCACHEFS_TAG_EXISTS=$(curl -sS -H "$GHCR_AUTH_HEADER" "https://ghcr.io/v2/${{ github.repository }}/bcachefs/tags/list?n=999999" | jq ".tags | any(. == \"$FCOS_VERSION-$BCACHEFS_VERSION\")")
 
           echo "BASE_TAG_EXISTS=$BASE_TAG_EXISTS" | tee -a "$GITHUB_OUTPUT"
           echo "ZFS_TAG_EXISTS=$ZFS_TAG_EXISTS" | tee -a "$GITHUB_OUTPUT"
