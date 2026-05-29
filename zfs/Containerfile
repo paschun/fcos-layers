@@ -20,7 +20,7 @@ RUN dnf install -y jq dkms akmods gcc make autoconf automake libtool rpm-build l
     libuuid-devel libudev-devel openssl-devel zlib-ng-devel libaio-devel libattr-devel elfutils-libelf-devel \
     python3 python3-devel python3-setuptools python3-cffi libffi-devel git ncompress libcurl-devel \
     kernel-$(cat /kernel-version.txt) kernel-modules-$(cat /kernel-version.txt) kernel-devel-$(cat /kernel-version.txt) kernel-rpm-macros \
-    systemd-devel libunwind-devel openssl python3-packaging pahole
+    systemd-devel libunwind-devel openssl python3-packaging dwarves
 
 ARG ZFS_VERSION
 # Inspo https://github.com/ublue-os/akmods/blob/main/build_files/zfs/build-kmod-zfs.sh
