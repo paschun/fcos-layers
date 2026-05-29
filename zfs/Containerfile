@@ -1,7 +1,8 @@
 # Needs to be set to the Fedora version on CoreOS stable stream, as it is our base image.
 ARG BUILDER_VERSION=latest
 # Base image for the final layer
-ARG BASE_IMAGE=quay.io/fedora/fedora-coreos:stable
+ARG BASE_IMAGE=ghcr.io/paschun/fcos-layers/base:stable
+
 
 FROM ${BASE_IMAGE} AS base
 
@@ -19,7 +20,7 @@ RUN dnf install -y jq dkms akmods gcc make autoconf automake libtool rpm-build l
     libuuid-devel libudev-devel openssl-devel zlib-ng-devel libaio-devel libattr-devel elfutils-libelf-devel \
     python3 python3-devel python3-setuptools python3-cffi libffi-devel git ncompress libcurl-devel \
     kernel-$(cat /kernel-version.txt) kernel-modules-$(cat /kernel-version.txt) kernel-devel-$(cat /kernel-version.txt) kernel-rpm-macros \
-    systemd-devel libunwind-devel openssl python3-packaging
+    systemd-devel libunwind-devel openssl python3-packaging pahole
 
 ARG ZFS_VERSION
 # Inspo https://github.com/ublue-os/akmods/blob/main/build_files/zfs/build-kmod-zfs.sh
@@ -31,10 +32,13 @@ RUN curl -L -O https://github.com/openzfs/zfs/releases/download/zfs-$(cat /zfs_v
     && mv zfs-$(cat /zfs_version.txt) zfs
 WORKDIR /zfs
 
-RUN ./configure -with-linux=/usr/src/kernels/$(cat /kernel-version.txt)/ -with-linux-obj=/usr/src/kernels/$(cat /kernel-version.txt)/ \
-    && make -j $(nproc) rpm-utils rpm-kmod \
-    || (cat config.log && exit 1)
+RUN <<EOF
+set -xeuo pipefail
+./configure --silent -with-linux=/usr/src/kernels/$(cat /kernel-version.txt)/ -with-linux-obj=/usr/src/kernels/$(cat /kernel-version.txt)/
+make -s -j $(nproc) rpm-utils rpm-kmod > /dev/null
+# || (cat config.log && exit 1)
 RUN ls -al /zfs/*.rpm
+EOF
 
 # Final layer
 FROM base
