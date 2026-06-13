@@ -37,7 +37,7 @@ set -xeuo pipefail
 ./configure --silent -with-linux=/usr/src/kernels/$(cat /kernel-version.txt)/ -with-linux-obj=/usr/src/kernels/$(cat /kernel-version.txt)/
 make -s -j $(nproc) rpm-utils rpm-kmod > /dev/null
 # || (cat config.log && exit 1)
-RUN ls -al /zfs/*.rpm
+ls -al /zfs/*.rpm
 EOF
 
 # Final layer
