@@ -104,7 +104,7 @@ jobs:
           echo "PLATFORM_PAIR=${PLATFORM//\//-}" | tee -a $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Set up BuildKit Docker container builder to be able to build-push and export cache
       # Needed for annotations
