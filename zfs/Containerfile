@@ -50,7 +50,7 @@ RUN rm -f \
       /zfs/*debug*.rpm \
       /zfs/zfs-test*.rpm \
     && ls -l /zfs/*.rpm \
-    && rpm-ostree install \
+    && dnf install -y \
       /zfs/*.rpm \
     # Auto-load ZFS module
     && depmod -a "$(rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')" \

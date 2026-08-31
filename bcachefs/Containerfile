@@ -153,7 +153,7 @@ COPY --from=builder /root/*.rpm /tmp/
 # installing bcachefs-tools from SUSE or COPR repo also tries to install dkms-bcachefs. So just install the plain .rpm file
 RUN <<EOF
 set -xeuo pipefail
-rpm-ostree install /tmp/bcachefs-*.rpm
+dnf install -y /tmp/bcachefs-*.rpm
 rm -v /tmp/bcachefs*.rpm
 ostree container commit
 EOF
