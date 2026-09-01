@@ -155,5 +155,4 @@ RUN <<EOF
 set -xeuo pipefail
 dnf install -y /tmp/bcachefs-*.rpm
 rm -v /tmp/bcachefs*.rpm
-ostree container commit
 EOF
