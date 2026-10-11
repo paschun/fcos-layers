@@ -87,7 +87,7 @@ jobs:
           - docker_arch: linux/amd64
             runner: ubuntu-latest
           - docker_arch: linux/arm64
-            runner: ubuntu-24.04-arm
+            runner: ubuntu-26.04-arm
 
     name: Build ${{ inputs.image_name }} on ${{ matrix.platform.docker_arch }}
     runs-on: ${{ matrix.platform.runner }}
